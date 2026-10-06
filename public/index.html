@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#173e58">
+    <title>Saint Lucie Home Explorer</title>
+    <link rel="stylesheet" href="/vendor/leaflet.css">
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/vendor/leaflet.js" defer></script>
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Saint Lucie Home Explorer</h1>
+        <p>Find a home on the map to see its public property record.</p>
+      </div>
+      <button id="locate" type="button">Use my location</button>
+    </header>
+    <main>
+      <section class="map-panel" aria-label="Property map">
+        <p id="status" role="status" aria-live="polite">Loading property map…</p>
+        <div id="map" aria-label="Map of Saint Lucie County"></div>
+      </section>
+      <aside aria-labelledby="details-title">
+        <h2 id="details-title">Select a home</h2>
+        <p>Tap a highlighted parcel, or choose a property below. Zoom in to see individual homes.</p>
+        <dl id="details" hidden></dl>
+        <h3>Properties in this view</h3>
+        <ul id="properties" aria-label="Selectable properties"></ul>
+        <p class="source">Source: Saint Lucie County Property Appraiser.
+          <a href="https://www.paslc.gov/231/Data-Requests" target="_blank" rel="noopener noreferrer">Data requests</a>.
+          Public records may be delayed; verify important details with the appraiser.
+        </p>
+        <p class="source">Location is requested only when you press the button.
+          Map tiles are provided by OpenStreetMap; your map view is sent to its tile servers.
+        </p>
+      </aside>
+    </main>
+  </body>
+</html>
