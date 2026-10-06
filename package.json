@@ -1,0 +1,19 @@
+{
+  "name": "project-002",
+  "version": "1.0.0",
+  "description": "Project 002 - using publicly available data to view homes in Port Saint Lucie Florida on your phone",
+  "main": "server.js",
+  "scripts": {
+    "test": "node --test",
+    "start": "node server.js",
+    "import-data": "node import-data.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "dependencies": {
+    "csv-parse": "7.0.3",
+    "leaflet": "1.9.4"
+  }
+}
