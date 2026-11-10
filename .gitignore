@@ -1,2 +1,6 @@
 PASLC/*
 !PASLC/Read.me
+website/data/
+StLucieParcelShapefile/*
+StLucieGIS_Summary.gdb/*
+__pycache__/

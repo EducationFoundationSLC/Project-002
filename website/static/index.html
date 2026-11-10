@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>St. Lucie Property Browser</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <button id="toggle-filters" class="ghost" aria-controls="filters" aria-expanded="false">Filters</button>
+    <h1>St. Lucie County Properties</h1>
+    <input id="search" type="search" placeholder="Search address, owner, parcel, subdivision">
+    <button id="near-me" class="ghost" title="Show properties near your location">📍 Near me</button>
+  </header>
+
+  <div class="layout">
+    <aside id="filters" class="filters">
+      <div class="filters-head">
+        <strong>Filters</strong>
+        <button id="reset" class="link">Reset all</button>
+      </div>
+
+      <details open>
+        <summary>Property type</summary>
+        <div id="f-category" class="checklist"></div>
+      </details>
+
+      <details open>
+        <summary>Location</summary>
+        <div class="select" id="near-box" hidden><label>Distance from <span id="near-label">you</span></label>
+          <select data-f="radius">
+            <option value="0.1">0.1 mi</option><option value="0.25">¼ mi</option>
+            <option value="">½ mi</option><option value="1">1 mi</option>
+            <option value="2">2 mi</option><option value="5">5 mi</option>
+          </select></div>
+        <label class="sub">Jurisdiction</label>
+        <div id="f-jurisdiction" class="checklist"></div>
+        <label class="sub">ZIP code</label>
+        <div id="f-zip" class="checklist cols"></div>
+      </details>
+
+      <details open>
+        <summary>Value &amp; tax</summary>
+        <div class="range"><label>Just (market) value</label>
+          <input data-f="just_min" type="number" min="0" step="10000" placeholder="Min">
+          <input data-f="just_max" type="number" min="0" step="10000" placeholder="Max"></div>
+        <div class="range"><label>Assessed value</label>
+          <input data-f="assessed_min" type="number" min="0" step="10000" placeholder="Min">
+          <input data-f="assessed_max" type="number" min="0" step="10000" placeholder="Max"></div>
+        <div class="range"><label>Taxable value</label>
+          <input data-f="taxable_min" type="number" min="0" step="10000" placeholder="Min">
+          <input data-f="taxable_max" type="number" min="0" step="10000" placeholder="Max"></div>
+        <div class="range"><label>Estimated annual tax</label>
+          <input data-f="tax_min" type="number" min="0" step="500" placeholder="Min">
+          <input data-f="tax_max" type="number" min="0" step="500" placeholder="Max"></div>
+        <div class="select"><label>Any exemption</label>
+          <select data-f="exempt"><option value="">Any</option><option value="1">Has exemptions</option><option value="0">No exemptions</option></select></div>
+        <div class="select"><label>Homestead exemption</label>
+          <select data-f="homestead"><option value="">Any</option><option value="1">Yes</option><option value="0">No</option></select></div>
+      </details>
+
+      <details>
+        <summary>Building</summary>
+        <div class="select"><label>Vacant / improved</label>
+          <select data-f="improved"><option value="">Any</option><option value="1">Has buildings</option><option value="0">Vacant land</option></select></div>
+        <div class="range"><label>Year built</label>
+          <input data-f="year_min" type="number" min="1800" max="2100" placeholder="From">
+          <input data-f="year_max" type="number" min="1800" max="2100" placeholder="To"></div>
+        <div class="range"><label>Living area (sq ft)</label>
+          <input data-f="area_min" type="number" min="0" step="100" placeholder="Min">
+          <input data-f="area_max" type="number" min="0" step="100" placeholder="Max"></div>
+        <div class="range"><label>Bedrooms / full baths (min)</label>
+          <input data-f="beds_min" type="number" min="0" placeholder="Beds">
+          <input data-f="baths_min" type="number" min="0" placeholder="Baths"></div>
+        <div class="range"><label>Lot size (acres)</label>
+          <input data-f="acres_min" type="number" min="0" step="0.1" placeholder="Min">
+          <input data-f="acres_max" type="number" min="0" step="0.1" placeholder="Max"></div>
+        <div class="select"><label>Pool</label>
+          <select data-f="pool"><option value="">Any</option><option value="1">Yes</option><option value="0">No</option></select></div>
+      </details>
+
+      <details>
+        <summary>Sales &amp; ownership</summary>
+        <div class="range"><label>Last sold between</label>
+          <input data-f="sold_after" type="date">
+          <input data-f="sold_before" type="date"></div>
+        <div class="range"><label>Last sale price</label>
+          <input data-f="sale_price_min" type="number" min="0" step="10000" placeholder="Min">
+          <input data-f="sale_price_max" type="number" min="0" step="10000" placeholder="Max"></div>
+        <div class="select"><label>Owner lives outside Florida</label>
+          <select data-f="out_of_state"><option value="">Any</option><option value="1">Yes</option><option value="0">No</option></select></div>
+      </details>
+    </aside>
+
+    <main class="results">
+      <div class="summary" id="summary" aria-live="polite"></div>
+      <div class="toolbar">
+        <div class="tabs" role="tablist" aria-label="Table columns">
+          <button role="tab" data-view="tax" aria-selected="true">Taxes</button>
+          <button role="tab" data-view="property" aria-selected="false">Property</button>
+          <button role="tab" data-view="map" aria-selected="false">Map</button>
+        </div>
+        <span class="note" id="rates-note"></span>
+      </div>
+      <div id="map-view" hidden>
+        <div id="results-map"></div>
+        <div id="map-status" class="map-status"></div>
+        <div id="map-legend" class="legend"></div>
+      </div>
+      <div class="table-wrap" id="table-view">
+        <table id="table">
+          <thead><tr></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="pager" id="pager">
+        <button id="prev" class="ghost">‹ Prev</button>
+        <span id="page-info"></span>
+        <button id="next" class="ghost">Next ›</button>
+      </div>
+    </main>
+  </div>
+
+  <div id="drawer" class="drawer" hidden>
+    <div class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="d-title">
+      <button id="drawer-close" class="close" aria-label="Close">×</button>
+      <div id="drawer-body"></div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="map.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
