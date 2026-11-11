@@ -22,13 +22,19 @@ A local website that lists every parcel in Saint Lucie County with filters.
    python website/build_db.py
    ```
 
-3. Start the server and open http://localhost:8000:
+3. Start the website: double-click **`start-website.cmd`** in the project folder. It
+   stops any copy that's already running, swaps in a newly built database if one is
+   waiting, finds your Anthropic API key for Ask AI (or asks for it once and can save
+   it), starts the server, and opens http://localhost:8000. Press Ctrl+C in its window
+   (or close the window) to stop the website.
+
+   Or start it by hand:
 
    ```
    python website/server.py
    ```
 
-Only the Python 3 standard library is required. The generated database
+Only the Python 3 standard library is required, plus the `anthropic` package for Ask AI. The generated database
 (`website/data/property.db`) is not committed.
 
 ### Filters
