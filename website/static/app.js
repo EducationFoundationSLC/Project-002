@@ -2,7 +2,10 @@
 // any filtered view can be bookmarked or shared.
 const state = { page: 1, size: 50, sort: "est_tax", dir: "desc", view: "tax", filters: {} };
 const DEFAULTS = { sort: "est_tax", dir: "desc", view: "tax" };
-const MULTI = ["category", "land_use", "jurisdiction", "zip"];
+const MULTI = ["category", "land_use", "jurisdiction", "zip", "exemption"];
+// Labels shown to people but not sent to the server.
+const LABEL_KEYS = ["near_label", "selection_label"];
+const apiParams = (filters) => Object.fromEntries(Object.entries(filters).filter(([k]) => !LABEL_KEYS.includes(k)));
 const $ = (s, el = document) => el.querySelector(s);
 const money = (n) => (n == null ? "—" : (n < 0 ? "−$" : "$") + Math.abs(Math.round(n)).toLocaleString());
 const cents = (n) => (n == null ? "—" : "$" + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
@@ -129,6 +132,8 @@ function renderFilters() {
   const j = listOf("jurisdiction"), z = listOf("zip");
   $("#f-jurisdiction").innerHTML = filterMeta.jurisdictions.map((r) => checkbox("jurisdiction", r.name, r.name, r.count, j.includes(r.name))).join("");
   $("#f-zip").innerHTML = filterMeta.zips.map((r) => checkbox("zip", r.name, r.name, r.count, z.includes(r.name))).join("");
+  const ex = listOf("exemption");
+  $("#f-exemption").innerHTML = filterMeta.exemptions.map((r) => checkbox("exemption", r.name, r.name, r.count, ex.includes(r.name))).join("");
   document.querySelectorAll(".subtypes").forEach((el) => {
     if (el.querySelector("input:checked")) toggleSub(el.previousElementSibling.querySelector(".expand"), true);
   });
@@ -170,8 +175,7 @@ let inflight;
 async function load() {
   writeHash();
   renderHead();
-  const { near_label, ...apiFilters } = state.filters;
-  const params = new URLSearchParams({ ...apiFilters, page: state.page, size: state.size, sort: state.sort, dir: state.dir });
+  const params = new URLSearchParams({ ...apiParams(state.filters), page: state.page, size: state.size, sort: state.sort, dir: state.dir });
   inflight?.abort();
   inflight = new AbortController();
   const tb = $("#table tbody");
@@ -191,9 +195,7 @@ async function load() {
   renderRows(data.rows);
   if (state.view === "map") {
     if (!ResultsMap.map) ResultsMap.init($("#results-map"), openDetail);
-    const mp = { ...state.filters };
-    delete mp.near_label;
-    ResultsMap.show(mp, nearState());
+    ResultsMap.show(apiParams(state.filters), nearState());
   }
   const pages = Math.max(1, Math.ceil(data.total / data.size));
   $("#page-info").textContent = `Page ${data.page.toLocaleString()} of ${pages.toLocaleString()}`;
@@ -213,6 +215,7 @@ const FLAGS = ["homestead", "pool", "out_of_state", "improved", "exempt"];
 const MONEY_PARAMS = /^(just|taxable|assessed|tax|sale_price)_(min|max)$/;
 function chipLabel(k, v) {
   if (k === "near") { const n = nearState(); return `Within ${n.radius} mi of ${n.label}`; }
+  if (k === "selection") return `AI: ${state.filters.selection_label || "selected properties"}`;
   if (MULTI.includes(k)) return v.split(",").join(", ");
   if (FLAGS.includes(k)) return `${LABELS[k]}: ${v === "1" ? "yes" : "no"}`;
   return `${LABELS[k] || k} ${MONEY_PARAMS.test(k) ? money(+v) : v}`;
@@ -221,7 +224,7 @@ function chipLabel(k, v) {
 function renderSummary(d) {
   const s = d.summary;
   const chips = Object.entries(state.filters)
-    .filter(([k]) => k !== "radius" && k !== "near_label")
+    .filter(([k]) => k !== "radius" && !LABEL_KEYS.includes(k))
     .map(([k, v]) => `<button class="chip" data-clear="${k}" title="Remove filter">${esc(chipLabel(k, v))} ×</button>`).join("");
   $("#summary").innerHTML = `
     <div class="stat"><b>${d.total.toLocaleString()}</b><span>properties</span></div>
@@ -397,6 +400,7 @@ document.addEventListener("click", (e) => {
   if (t.matches(".expand")) return toggleSub(t);
   if (t.matches("[data-clear]")) {
     if (t.dataset.clear === "near") clearNear(); else delete state.filters[t.dataset.clear];
+    if (t.dataset.clear === "selection") delete state.filters.selection_label;
     syncInputs();
     return refilter();
   }
@@ -423,6 +427,107 @@ $("#reset").addEventListener("click", () => { clearNear(); state.filters = {}; s
 $("#toggle-filters").addEventListener("click", (e) => {
   const open = $("#filters").classList.toggle("open");
   e.target.setAttribute("aria-expanded", open);
+});
+
+// ---------- Ask AI ----------
+// Questions go to /api/ask. The server asks Claude, which can run read-only
+// database queries and choose properties to show in the table and map.
+const askHistory = [];  // earlier questions and answers, so follow-up questions work
+
+// A very small Markdown renderer for answers: paragraphs, lists, tables, **bold**, `code`.
+function renderMarkdown(text) {
+  const inline = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/`([^`]+)`/g, "<code>$1</code>");
+  const out = [];
+  const lines = text.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    if (line.startsWith("|")) {  // a table: collect its rows, skip the |---| line
+      const rows = [];
+      for (; i < lines.length && lines[i].trim().startsWith("|"); i++) {
+        if (!/^\|[\s:|-]+\|$/.test(lines[i].trim())) rows.push(lines[i].trim().slice(1, -1).split("|").map((c) => c.trim()));
+      }
+      i--;
+      out.push(`<table>${rows.map((r, n) => `<tr>${r.map((c) => n ? `<td>${inline(c)}</td>` : `<th>${inline(c)}</th>`).join("")}</tr>`).join("")}</table>`);
+    } else if (/^([-*]|\d+\.)\s/.test(line)) {  // a list
+      const items = [];
+      for (; i < lines.length && /^([-*]|\d+\.)\s/.test(lines[i].trim()); i++) items.push(lines[i].trim().replace(/^([-*]|\d+\.)\s+/, ""));
+      i--;
+      out.push(`<ul>${items.map((it) => `<li>${inline(it)}</li>`).join("")}</ul>`);
+    } else {
+      out.push(`<p>${inline(line.replace(/^#+\s*/, ""))}</p>`);
+    }
+  }
+  return out.join("");
+}
+
+function addAskMessage(cls, html) {
+  const div = document.createElement("div");
+  div.className = cls;
+  div.innerHTML = html;
+  $("#ask-log").appendChild(div);
+  $("#ask-log").scrollTop = $("#ask-log").scrollHeight;
+  return div;
+}
+
+async function askQuestion(question) {
+  addAskMessage("ask-q", esc(question));
+  const pending = addAskMessage("ask-a meta", "Thinking… (this can take a little while)");
+  $("#ask-input").disabled = true;
+  let data;
+  try {
+    const res = await fetch("/api/ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question, history: askHistory, filters: apiParams(state.filters) }),
+    });
+    data = res.ok ? await res.json() : { error: `The server answered ${res.status}.` };
+  } catch (e) {
+    data = { error: "Couldn't reach the server." };
+  }
+  $("#ask-input").disabled = false;
+  $("#ask-input").focus();
+  if (data.error) {
+    pending.className = "ask-a ask-error";
+    pending.textContent = data.error;
+    return;
+  }
+  askHistory.push({ role: "user", content: question }, { role: "assistant", content: data.answer });
+  pending.className = "ask-a";
+  pending.innerHTML = renderMarkdown(data.answer) +
+    (data.queries?.length ? `<details><summary>How I found this (${data.queries.length} database ${data.queries.length === 1 ? "query" : "queries"})</summary>
+      ${data.queries.map((q) => `<pre>${esc(q)}</pre>`).join("")}</details>` : "");
+  if (data.show) {  // show the properties Claude picked in the table and map
+    clearNear();
+    state.filters = { ...data.show.filters };
+    state.sort = data.show.sort;
+    state.dir = data.show.dir;
+    syncInputs();
+    refilter();
+  }
+}
+
+function toggleAsk(open) {
+  $("#ask").hidden = !open;
+  $("#ask-open").classList.toggle("active", open);
+  $("#ask-open").setAttribute("aria-expanded", open);
+  if (open) $("#ask-input").focus();
+}
+$("#ask-open").addEventListener("click", () => toggleAsk($("#ask").hidden));
+$("#ask-close").addEventListener("click", () => toggleAsk(false));
+$("#ask-new").addEventListener("click", () => {
+  askHistory.length = 0;
+  $("#ask-log").querySelectorAll(".ask-q, .ask-a").forEach((el) => el.remove());
+});
+$("#ask-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const q = $("#ask-input").value.trim();
+  if (!q || $("#ask-input").disabled) return;
+  $("#ask-input").value = "";
+  askQuestion(q);
+});
+$("#ask-log").addEventListener("click", (e) => {
+  if (e.target.matches("[data-example]") && !$("#ask-input").disabled) askQuestion(e.target.textContent);
 });
 
 (async function init() {

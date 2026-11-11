@@ -12,6 +12,9 @@ import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import ask  # noqa: E402  "Ask AI" chat (needs the anthropic package and an API key)
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(HERE, "data", "property.db")
 STATIC = os.path.join(HERE, "static")
@@ -92,6 +95,14 @@ def build_where(q):
         if vals:
             clauses.append(f"{col} IN ({','.join('?' * len(vals))})")
             args += vals
+    groups = [v for v in q.get("exemption", "").split(",") if v]
+    if groups:  # properties with at least one exemption in these groups
+        clauses.append("property_id IN (SELECT property_id FROM exemptions "
+                       f"WHERE exemption_group IN ({','.join('?' * len(groups))}))")
+        args += groups
+    if q.get("selection"):  # properties picked by an Ask AI query
+        clauses.append("property_id IN (SELECT value FROM json_each(?))")
+        args.append(json.dumps(ask.selection_ids(q["selection"])))
     for param, frag in RANGE_FILTERS.items():
         v = q.get(param, "").strip()
         if v:
@@ -150,6 +161,13 @@ def api_properties(q):
     }
 
 
+def count_properties(filters):
+    """How many properties match a set of website filters (used by Ask AI)."""
+    where, args = build_where(filters)
+    with db() as con:
+        return con.execute(f"SELECT COUNT(*) FROM property{where}", args).fetchone()[0]
+
+
 def api_map(q):
     """Properties inside a map view: points always, outlines when shapes=1."""
     min_lon, min_lat, max_lon, max_lat = (float(v) for v in q["bbox"].split(","))
@@ -186,6 +204,9 @@ def api_filters():
             "SELECT jurisdiction, COUNT(*) n FROM property WHERE jurisdiction <> '' "
             "GROUP BY 1 ORDER BY 2 DESC").fetchall()
         rates_year = con.execute("SELECT value FROM meta WHERE key='rates_year'").fetchone()[0]
+        exemption_groups = con.execute(
+            "SELECT exemption_group, COUNT(DISTINCT property_id) n FROM exemptions "
+            "GROUP BY 1 ORDER BY 2 DESC").fetchall()
         zips = con.execute(
             "SELECT zip, COUNT(*) n FROM property WHERE zip IS NOT NULL "
             "GROUP BY 1 ORDER BY 1").fetchall()
@@ -198,6 +219,8 @@ def api_filters():
         "categories": sorted(categories.values(), key=lambda e: -e["count"]),
         "jurisdictions": [{"name": r[0], "count": r[1]} for r in juris],
         "zips": [{"name": r[0], "count": r[1]} for r in zips],
+        "exemptions": [{"name": r[0], "count": r[1]} for r in exemption_groups],
+        "ask_ai": ask.setup_problem() is None,
         "rates_year": rates_year,
     }
 
@@ -251,6 +274,29 @@ class Handler(BaseHTTPRequestHandler):
         except (ValueError, KeyError):
             return self.send_error(400, "Bad parameter")
         self.send_static(url.path)
+
+    def do_POST(self):
+        if urlparse(self.path).path != "/api/ask":
+            return self.send_error(404)
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+            if not 0 < length <= 50000:
+                raise ValueError
+            body = json.loads(self.rfile.read(length))
+            question = str(body.get("question", "")).strip()[:1000]
+            if not question:
+                raise ValueError
+            history = body.get("history") if isinstance(body.get("history"), list) else []
+            filters = body.get("filters") if isinstance(body.get("filters"), dict) else {}
+        except (ValueError, TypeError):
+            return self.send_error(400, "Bad request")
+        try:
+            result = ask.answer(question, history, {k: str(v) for k, v in filters.items()},
+                                visitor=self.client_address[0], db_path=DB_PATH,
+                                count_properties=count_properties)
+        except Exception as e:  # network or API problems: tell the user instead of crashing
+            result = {"error": f"The AI service had a problem ({type(e).__name__}). Please try again."}
+        self.send_json(result)
 
     def send_json(self, data):
         body = json.dumps(data).encode()

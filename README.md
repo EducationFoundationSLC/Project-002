@@ -40,6 +40,10 @@ Only the Python 3 standard library is required. The generated database
   unincorporated county) and ZIP code
 - **Value & tax** – just (market), assessed and taxable value, estimated annual tax,
   any exemption, homestead exemption
+- **Exemption type** – Homestead, Senior (65+), Disabled veteran, Widow or widower,
+  Disability, Surviving spouse, Religious / charitable / education, Government & public,
+  Other. The groups of county exemption codes are set in `EXEMPTION_GROUPS` in
+  `build_db.py`.
 - **Building** – vacant vs. improved, year built, living area, bedrooms, baths,
   lot size, pool
 - **Sales & ownership** – last sale date and price, out-of-state owner
@@ -76,6 +80,50 @@ was entered.
 Known gap: the City of Port St. Lucie solid waste fee (about $482 on a 2026 TRIM notice)
 isn't in the Property Appraiser's CSV export, so it's missing from estimates for PSL
 properties.
+
+### Ask AI (chat about the data)
+
+The **✨ Ask AI** button opens a chat box. Type a question in plain English, for example
+"Show me properties with a senior exemption and a disabled veteran exemption." Claude,
+Anthropic's AI, answers it from the database. When the question asks to see properties,
+they appear in the table and map. Under each answer, "How I found this" shows the database
+queries Claude ran.
+
+The code is in `website/ask.py`. Claude can use two tools:
+
+- `run_sql`: runs one read-only `SELECT` query. The connection is read-only, an SQLite
+  authorizer blocks everything except reading, and queries stop after 5 seconds.
+- `show_on_website`: sets the website's filters. A query can also pick the properties,
+  which works for things filters can't express, such as two exemptions that must both
+  apply.
+
+**Setup:**
+
+1. Install the SDK: `pip install anthropic`
+2. Get an API key at https://console.anthropic.com. An adult or the organization should
+   own the account. Set a monthly spending limit there.
+3. Set the key before starting the server (PowerShell):
+
+   ```powershell
+   $env:ANTHROPIC_API_KEY = "sk-ant-..."
+   python website/server.py
+   ```
+
+   Never put the key in a file in this repository.
+
+Without a key, the rest of the website works, and the chat box explains how to set one
+up. These optional settings are environment variables:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `ASK_MODEL` | `claude-opus-5-5` | Claude model to use |
+| `ASK_EFFORT` | `medium` | How hard Claude thinks: `low`, `medium` or `high` |
+| `ASK_QUESTIONS_PER_HOUR` | `30` | Limit for each visitor |
+
+Each question costs a few cents with the default model. A cheaper model such as
+`claude-haiku-5-5` costs much less, so try it on your usual questions to see whether the
+answers are still good. Before a public launch, review the hourly limit, the spending limit,
+and whether answers should include owner names.
 
 ### Maps and lot drawings
 

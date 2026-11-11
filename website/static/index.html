@@ -13,6 +13,7 @@
     <h1>St. Lucie County Properties</h1>
     <input id="search" type="search" placeholder="Search address, owner, parcel, subdivision">
     <button id="near-me" class="ghost" title="Show properties near your location">📍 Near me</button>
+    <button id="ask-open" class="ghost" aria-controls="ask" aria-expanded="false" title="Ask a question about the data">✨ Ask AI</button>
   </header>
 
   <div class="layout">
@@ -61,6 +62,11 @@
           <select data-f="homestead"><option value="">Any</option><option value="1">Yes</option><option value="0">No</option></select></div>
       </details>
 
+      <details open>
+        <summary>Exemption type</summary>
+        <div id="f-exemption" class="checklist"></div>
+      </details>
+
       <details>
         <summary>Building</summary>
         <div class="select"><label>Vacant / improved</label>
@@ -95,6 +101,27 @@
     </aside>
 
     <main class="results">
+      <section id="ask" class="ask" hidden aria-label="Ask AI">
+        <div class="ask-head">
+          <strong>✨ Ask AI about the data</strong>
+          <span>
+            <button id="ask-new" class="link">New conversation</button>
+            <button id="ask-close" class="close" aria-label="Close">×</button>
+          </span>
+        </div>
+        <div id="ask-log" class="ask-log" aria-live="polite">
+          <p class="meta">Ask a question in plain English. Try:
+            <button class="chip" data-example>Show me properties with a senior exemption and a disabled veteran exemption</button>
+            <button class="chip" data-example>Which 5 cities or areas pay the most total property tax?</button>
+            <button class="chip" data-example>Show homes with a pool built after 2020, highest tax first</button>
+          </p>
+        </div>
+        <form id="ask-form" class="ask-form">
+          <input id="ask-input" type="text" maxlength="1000" placeholder="e.g. How many homes in 34953 have a homestead exemption?" autocomplete="off">
+          <button class="ghost" type="submit">Ask</button>
+        </form>
+        <p class="meta">Answers come from Claude, an AI, and can be wrong. Check important numbers.</p>
+      </section>
       <div class="summary" id="summary" aria-live="polite"></div>
       <div class="toolbar">
         <div class="tabs" role="tablist" aria-label="Table columns">

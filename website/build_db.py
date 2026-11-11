@@ -50,6 +50,25 @@ CASE
 END
 """
 
+# Exemption codes grouped into the categories the website filters on.
+# Group names must not contain commas: the website joins filter values with commas.
+EXEMPTION_GROUPS = {
+    "Homestead": ["0500", "0509", "0550", "0600", "0700", "0750", "0800"],
+    "Senior (65+)": ["0565"],
+    "Disabled veteran": ["2100", "2400", "2401", "2500"],
+    "Surviving spouse (veteran or first responder)": ["2105", "2110", "2115", "2130", "2410", "2510"],
+    "Widow or widower": ["4000", "4200"],
+    "Disability": ["1900", "2120", "2200", "2300", "2600"],
+    "Religious / charitable / education": ["3000", "3200", "3400", "3450", "3460", "3465", "3470",
+                                          "3475", "3500", "3600", "3700", "3800", "3900", "3910"],
+    "Government & public": ["7000", "7500", "7505", "7700", "7800", "7900", "7905", "8000", "8005",
+                            "8010", "8100", "8200", "8300", "8500", "8505", "8600", "9000", "9005",
+                            "9100", "9500", "M001", "RROL"],
+}
+EXEMPTION_GROUP_SQL = "CASE Exemption " + " ".join(
+    f"WHEN '{code}' THEN '{group.replace(chr(39), chr(39) * 2)}'"
+    for group, codes in EXEMPTION_GROUPS.items() for code in codes) + " ELSE 'Other' END"
+
 # raw table name -> (csv file, columns to keep)
 RAW = {
     "raw_ident": ("PropertyIdentification.csv", [
@@ -219,9 +238,11 @@ CREATE INDEX ix_sales_pid ON sales(property_id);
 
 DROP TABLE IF EXISTS exemptions;
 CREATE TABLE exemptions AS
-  SELECT CAST(PropertyID AS INTEGER) AS property_id, ExemptionDescription AS description,
+  SELECT CAST(PropertyID AS INTEGER) AS property_id, Exemption AS code,
+         ExemptionDescription AS description, {EXEMPTION_GROUP_SQL} AS exemption_group,
          GrantYear AS grant_year FROM raw_exempt;
 CREATE INDEX ix_exemptions_pid ON exemptions(property_id);
+CREATE INDEX ix_exemptions_group ON exemptions(exemption_group, property_id);
 
 DROP TABLE IF EXISTS other_assessments;
 CREATE TABLE other_assessments AS

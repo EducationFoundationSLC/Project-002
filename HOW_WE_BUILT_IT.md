@@ -22,10 +22,11 @@ next to them, and try to follow the idea.
 7. [Step 6: Build the web page](#step-6-build-the-web-page)
 8. [Step 7: Put the properties on a map](#step-7-put-the-properties-on-a-map)
 9. [Step 8: Draw the lot](#step-8-draw-the-lot)
-10. [Bugs we found and fixed](#bugs-we-found-and-fixed)
-11. [How to run it yourself](#how-to-run-it-yourself)
-12. [Ideas for what to build next](#ideas-for-what-to-build-next)
-13. [Glossary](#glossary)
+10. [Step 9: Ask the data questions with AI](#step-9-ask-the-data-questions-with-ai)
+11. [Bugs we found and fixed](#bugs-we-found-and-fixed)
+12. [How to run it yourself](#how-to-run-it-yourself)
+13. [Ideas for what to build next](#ideas-for-what-to-build-next)
+14. [Glossary](#glossary)
 
 ---
 
@@ -661,6 +662,94 @@ We checked that answer against the property's deed, which says **0.646 acres**. 
 
 ---
 
+## Step 9: Ask the data questions with AI
+
+The filters can answer many questions, but not every question. "Which street has the most
+pools?" or "Show me seniors who are also disabled veterans" would each need a new filter.
+So we added an **✨ Ask AI** chat box. You type a question in plain English, and an AI
+model called **Claude** answers it from our database.
+
+### How the AI uses tools
+
+Claude can't see our database directly. Instead, we give it **tools**: functions it can
+ask us to run. The code is in `website/ask.py`. Here's how one question goes:
+
+```
+ You: "How many homes have a pool?"
+   │
+   ▼
+ Our server ──► Claude: here's the question, a description of our tables,
+                        and two tools you can use (run_sql, show_on_website)
+                Claude ──► "Please run: SELECT COUNT(*) FROM property WHERE pool = 1"
+ Our server runs the query ──► sends back: 30,395
+                Claude ──► "There are 30,395 properties with a pool."
+   │
+   ▼
+ The answer appears in the chat box
+```
+
+Claude can call tools several times before it answers, for example to fix a query that had
+a mistake. That back-and-forth is called a **loop**. Here's a simplified version:
+
+```python
+messages = [{"role": "user", "content": question}]
+
+for _ in range(MAX_TOOL_ROUNDS):     # a limit, so it can never loop forever
+    response = client.beta.messages.create(
+        model="claude-opus-5-5",     # which Claude model to use
+        system=system_prompt,         # instructions plus a description of our database
+        tools=TOOLS,                  # the tools Claude may ask us to run
+        messages=messages,            # the conversation so far
+        max_tokens=16000,
+    )
+    messages.append({"role": "assistant", "content": response.content})
+
+    tool_calls = [b for b in response.content if b.type == "tool_use"]
+    if not tool_calls:                # no tool requests means Claude has written its answer
+        return the text of the response
+
+    results = []
+    for call in tool_calls:           # run each tool Claude asked for
+        results.append({"type": "tool_result", "tool_use_id": call.id,
+                        "content": run_tool(call.name, call.input)})
+    messages.append({"role": "user", "content": results})   # send the results back
+```
+
+### Keeping the database safe
+
+Claude writes its own SQL, so we have to make sure that SQL can't do anything harmful. Here
+are the safety layers. Each one would stop a problem on its own:
+
+1. The connection is **read-only** (`mode=ro`), so it can't change the database.
+2. An **authorizer** checks every step of every query. It only allows reading:
+
+   ```python
+   def _authorizer(action, arg1, arg2, db_name, trigger):
+       """Called by SQLite for every step of a query: allow reading only."""
+       allowed = (sqlite3.SQLITE_SELECT, sqlite3.SQLITE_READ, sqlite3.SQLITE_FUNCTION, ...)
+       return sqlite3.SQLITE_OK if action in allowed else sqlite3.SQLITE_DENY
+   ```
+
+3. A **time limit** stops any query that runs longer than 5 seconds.
+4. Only **one statement** can run at a time, so `SELECT 1; DELETE FROM property` fails.
+
+We tested it: `UPDATE`, `DELETE`, `DROP` and `ATTACH` are all blocked, and a query that
+would run forever is stopped. When a query is blocked, Claude sees the error and tries a
+different way.
+
+**Lesson:** When a program (or a person) gives you code to run, don't trust it. Limit what
+it's *able* to do, even if you expect it to behave.
+
+### "How I found this"
+
+Under each answer, click **How I found this** to see the exact SQL queries Claude ran.
+That's a great way to learn SQL: ask a question, then read how the query answers it.
+
+> **AI can be wrong.** Claude usually writes good queries, but always check numbers that
+> matter. Seeing the SQL lets you check its work.
+
+---
+
 ## Bugs we found and fixed
 
 Every real project has bugs. Here are some we ran into and what they taught us.
@@ -775,7 +864,9 @@ Here are some things the class could work on, roughly from easiest to hardest:
 
 | Word | Meaning |
 |---|---|
+| **AI model** | A program trained on lots of text that can understand questions and write answers, like Claude. |
 | **API** | A set of web addresses a program can call to get data (here, the ones starting with `/api/`). |
+| **API key** | A secret password that lets a program use a paid service, like Claude. Never put it in GitHub. |
 | **Assessed value** | The value used for taxes, which can be capped below the just value. |
 | **CSV** | "Comma-separated values": a spreadsheet saved as plain text. |
 | **Database** | A program that stores data so it can be searched quickly. |
@@ -794,3 +885,4 @@ Here are some things the class could work on, roughly from easiest to hardest:
 | **SQL** | "Structured Query Language": the language for asking databases questions. |
 | **SQL injection** | An attack that sneaks commands into a database through a form; stopped by `?` placeholders. |
 | **Taxable value** | Assessed value minus exemptions. This is the value that gets taxed. |
+| **Tool (for AI)** | A function the AI can ask our program to run, like `run_sql`. |
