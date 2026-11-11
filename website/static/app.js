@@ -31,7 +31,9 @@ const C = {
   address: { label: "Address", sort: "address", cell: (r) => `<div class="addr">${esc(r.address || "(no address)")}${r.unit ? " #" + esc(r.unit) : ""}</div>
       <div class="meta">${r.distance != null ? `<b>${r.distance} mi</b> · ` : ""}${esc(r.jurisdiction)} ${esc(r.zip || "")}${r.pool ? '<span class="badge">Pool</span>' : ""}${r.homestead ? '<span class="badge">HX</span>' : ""}</div>` },
   type: { label: "Type", sort: "land_use_desc", cls: "hide-sm", cell: (r) => `<div>${esc(r.land_use_desc)}</div><div class="meta">${esc(r.category)}</div>` },
-  owner: { label: "Owner", sort: "owner", cls: "owner hide-sm", cell: (r) => esc(r.owner), title: (r) => r.owner },
+  owner: { label: "Owners", sort: "owner", cls: "owner hide-sm",
+    cell: (r) => `<div>${esc(r.owner)}</div>${r.owner2 ? `<div>${esc(r.owner2)}</div>` : ""}`,
+    title: (r) => [r.owner, r.owner2].filter(Boolean).join("\n") },
   just: { label: "Just value", sort: "just_value", cls: "num hide-sm", cell: (r) => money(r.just_value) },
   assessed: { label: "Assessed", sort: "assessed_value", cls: "num", cell: (r) => money(r.assessed_value) },
   exempt: { label: "Exemptions", sort: "exemption_value", cls: "num exempt", cell: (r) => r.exemption_value

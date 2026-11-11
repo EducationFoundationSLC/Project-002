@@ -750,7 +750,7 @@ Here are some things the class could work on, roughly from easiest to hardest:
 5. **Check our math.** Compare our estimate with a real tax bill from the Tax Collector's
    website. How close are we?
 6. **Design the phone app.** Sketch the screens on paper first. What should someone
-   see when they open the app?
+   see when they open the app? Then read the [phone app plan](docs/phone-app/README.md).
 
 ---
 

@@ -7,6 +7,8 @@ PASLC data files are located here: https://www.paslc.gov/231/Data-Requests
 
 New to the project? [HOW_WE_BUILT_IT.md](HOW_WE_BUILT_IT.md) walks through how the website was built, step by step, with commented code examples.
 
+Planning the phone app? Start with [docs/phone-app/README.md](docs/phone-app/README.md), then see the [Android / Google Play](docs/phone-app/android.md) and [iPhone / App Store](docs/phone-app/iphone.md) guides.
+
 ## Property browser website
 
 A local website that lists every parcel in Saint Lucie County with filters.

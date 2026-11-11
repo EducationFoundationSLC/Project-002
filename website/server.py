@@ -21,7 +21,7 @@ MILES_PER_DEG_LAT = 69.0
 
 LIST_COLUMNS = [
     "property_id", "parcel_id", "address", "unit", "jurisdiction", "zip", "category",
-    "land_use_desc", "owner", "year_built", "living_area", "bedrooms", "full_baths",
+    "land_use_desc", "owner", "owner2", "year_built", "living_area", "bedrooms", "full_baths",
     "half_baths", "acres", "pool", "homestead", "just_value", "assessed_value",
     "exemption_value", "exemptions", "taxable_value", "non_ad_valorem", "est_ad_valorem",
     "est_tax", "millage", "last_sale_date", "last_sale_price", "lat", "lon",
@@ -111,8 +111,8 @@ def build_where(q):
     text = q.get("q", "").strip()
     if text:
         like = f"%{text}%"
-        clauses.append("(address LIKE ? OR owner LIKE ? OR parcel_id LIKE ? OR subdivision LIKE ?)")
-        args += [like, like, like, like]
+        clauses.append("(address LIKE ? OR owner LIKE ? OR owner2 LIKE ? OR parcel_id LIKE ? OR subdivision LIKE ?)")
+        args += [like] * 5
     return (" WHERE " + " AND ".join(clauses)) if clauses else "", args
 
 
