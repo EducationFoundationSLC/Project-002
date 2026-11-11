@@ -20,7 +20,7 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 CSV_DIR = os.path.join(HERE, "..", "PASLC")
 RATES_CSV = os.path.join(HERE, "tax_rates.csv")
-RATES_YEAR = 2025  # year of the millage in tax_rates.csv (DOR "2025 Final Millage Rates")
+RATES_YEAR = 2026  # year of the millage in tax_rates.csv (Property Appraiser "2026 Final Millage Rates")
 FIRST_HOMESTEAD = 25000  # the only homestead exemption that applies to school levies
 SENIOR_EXEMPTION = 25000  # St. Lucie County's senior exemption; county levies only
 
@@ -309,10 +309,12 @@ def add_tax_estimates(con):
             FROM levies GROUP BY district_group;
         UPDATE property SET
             millage = (SELECT millage FROM _rates r WHERE r.district_group = property.tax_district),
-            est_ad_valorem = ROUND((SELECT (county_mills * property.taxable_value
-                                           + other_mills * property.district_taxable
-                                           + school_mills * property.school_taxable) / 1000.0
-                                    FROM _rates r WHERE r.district_group = property.tax_district), 2);
+            -- Round each levy to the cent before adding them up, as the TRIM notice does.
+            est_ad_valorem = (SELECT ROUND(SUM(ROUND(l.rate * CASE l.basis
+                                        WHEN 'county' THEN property.taxable_value
+                                        WHEN 'other'  THEN property.district_taxable
+                                        ELSE property.school_taxable END / 1000.0, 2)), 2)
+                              FROM levies l WHERE l.district_group = property.tax_district);
         UPDATE property SET est_tax = ROUND(COALESCE(est_ad_valorem, 0) + COALESCE(non_ad_valorem, 0), 2);
         CREATE INDEX ix_property_est_tax ON property(est_tax);
         CREATE INDEX ix_property_assessed ON property(assessed_value);

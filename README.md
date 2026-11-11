@@ -53,10 +53,10 @@ in the URL, so it can be bookmarked or shared.
 
 The CSVs contain values and exemptions but not tax rates. `website/tax_rates.csv`
 holds the millage for each levy and the tax district groups it applies to, taken from
-the Florida DOR "2025 Final Millage Rates" for Saint Lucie County. Each parcel's
-estimate is its taxable value times its district's millage, plus non-ad valorem
-assessments. The `basis` column says which taxable value each levy uses, matching the
-TRIM notice:
+the Property Appraiser's "2026 Final Millage Rates" table (paslc.gov, Millage / Tax Rates
+page). Each parcel's estimate is its taxable value times its district's millage, plus
+non-ad valorem assessments. The `basis` column says which taxable value each levy uses,
+matching the TRIM notice:
 
 - `county`: the roll's taxable value, after all exemptions.
 - `other` (cities and independent districts): adds back the senior exemption, which
@@ -64,25 +64,14 @@ TRIM notice:
 - `school`: only the first $25,000 homestead exemption applies, and the 10%
   non-homestead assessment cap doesn't.
 
+Each levy is rounded to the cent before the levies are added together, as on the TRIM
+notice. A 2026 TRIM notice for a homestead property with a senior exemption in district
+0011 matches line for line, down to the cent ($4,322.19 ad valorem). Each property also
+links to its official TRIM notice from the Property Appraiser.
+
 When new rates are adopted, edit `tax_rates.csv`, set `RATES_YEAR` in `build_db.py`,
-and rebuild.
-
-The 2025 rates were checked against the "last year" column of a 2026 TRIM notice, and
-they match. As of November 2026, the Florida DOR hadn't yet posted its 2026 St. Lucie
-rate table (the "2026 Saint Lucie TACD" PDF in the DOR data portal's TACD History
-folder). Switch to 2026 when it's posted. These 2026 final rates are already known:
-
-| Levy | 2026 rate |
-|---|---|
-| School (state required) | 2.9970 |
-| School (local board) | 3.2480 (unchanged) |
-| Port St. Lucie | 4.6107 |
-| PSL Voted Debt | 0.2643 |
-| Fort Pierce | 6.9000 (unchanged) |
-
-The county's final 2026 rates still need an official source. The TRIM notice proposed
-lowering the General Fund to 4.0441. Each property also links to its official TRIM notice from the Property
-Appraiser.
+and rebuild. The district totals in the rate table make a quick check that every rate
+was entered.
 
 Known gap: the City of Port St. Lucie solid waste fee (about $482 on a 2026 TRIM notice)
 isn't in the Property Appraiser's CSV export, so it's missing from estimates for PSL

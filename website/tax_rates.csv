@@ -1,13 +1,13 @@
 levy_code,authority,basis,rate,district_groups
 FP22,City of Fort Pierce,other,6.9000,0022
-PS25,City of Port Saint Lucie,other,4.6607,0011 0041
-VL09,Village of Saint Lucie,other,2.0000,0009
-GF01,County General Fund,county,4.1985,0001 0002 0050 0009 0011 0022 0041
+PS25,City of Port Saint Lucie,other,4.6107,0011 0041
+VL09,Village of Saint Lucie,other,2.0600,0009
+GF01,County General Fund,county,4.0441,0001 0002 0050 0009 0011 0022 0041
 GF02,Community Dev. MSTU,county,0.5000,0001 0002 0050
 GF03,Law Enforcement MSTU,county,0.8403,0001 0002 0050
 CD01,SLC Stormwater Management,county,0.4731,0001 0002 0050
 FF02,Co Fine & Forfeiture (Jail),county,2.7294,0001 0002 0050 0009 0011 0022 0041
-SR08,School (RLE),school,3.0480,0001 0002 0050 0009 0011 0022 0041
+SR08,School (RLE),school,2.9970,0001 0002 0050 0009 0011 0022 0041
 SN39,School (Capital Outlay),school,1.5000,0001 0002 0050 0009 0011 0022 0041
 SD09,School (Discretionary),school,0.7480,0001 0002 0050 0009 0011 0022 0041
 SR09,School (Voter Referendum),school,1.0000,0001 0002 0050 0009 0011 0022 0041
@@ -20,5 +20,5 @@ MC14,Mosquito Control,county,0.1352,0002 0050 0009 0011 0022
 EE19,Erosion District E,county,0.1000,0001 0002 0050 0009 0011 0022 0041
 CS64,Children's Services Council,other,0.3685,0001 0002 0050 0009 0011 0022 0041
 CT06,County Public Transit MSTU,county,0.2500,0001 0002 0050 0009 0011 0022 0041
-PS26,PSL Voted Debt,other,0.3143,0011 0041
+PS26,PSL Voted Debt,other,0.2643,0011 0041
 EC01,SHI Erosion Control MSTU,county,0.5200,0050

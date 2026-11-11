@@ -333,8 +333,8 @@ print(estimate_tax(
 **Try it:** What happens to the tax if the home's taxable value goes up by $10,000?
 What if the county raises its millage by 1 mill?
 
-> **Note:** These are *estimates*. We used the 2025 tax rates because the 2026 rates
-> weren't published yet. The real bill comes from the Tax Collector.
+> **Note:** This example uses the 2025 rates. The website now uses the official
+> 2026 final rates. These are still *estimates*: the real bill comes from the Tax Collector.
 
 ---
 
@@ -685,7 +685,24 @@ if not (min_x <= point_x <= max_x and min_y <= point_y <= max_y):
 
 **Lesson:** Data can be wrong. Check that values make sense before you use them.
 
-### 2. Duplicate IDs
+### 2. Checking our math against an official notice
+
+**What happened:** We compared our estimate for one home with its official **TRIM
+notice**, the "proposed taxes" letter the Property Appraiser mails every August. The
+county taxes matched, but the city and school taxes were too low.
+
+**Why:** The notice showed that taxes aren't all charged on the same value. That home
+has a **senior exemption**, and the senior exemption only lowers *county* taxes. We
+had been taking it off *every* tax.
+
+**Fix:** Each tax in `tax_rates.csv` now has a `basis` column: `county`, `school` or
+`other`. Each basis uses its own taxable value. After the fix, and after updating to the
+2026 rates, every line on the notice matched ours **to the penny**.
+
+**Lesson:** Find an official answer to compare with. Our math looked right until we
+checked it against a real notice.
+
+### 3. Duplicate IDs
 
 **What happened:** Building the database crashed with `UNIQUE constraint failed`.
 
@@ -697,14 +714,14 @@ properties had **two** rows in one of the CSV files, so they appeared twice.
 **Lesson:** Don't assume the data follows the rules. Let the database check them
 for you.
 
-### 3. 10,370 houses on "0 TBD" street
+### 4. 10,370 houses on "0 TBD" street
 
 **What happened:** Over ten thousand properties had the address `0  TBD` ("to be
 determined"). These are mostly empty lots with no street number yet.
 
 **Fix:** We show them as "(no address)" instead of a fake-looking address.
 
-### 4. Too wide for a phone
+### 5. Too wide for a phone
 
 **What happened:** On a phone screen, the page was wider than the screen and you had to
 scroll sideways.
