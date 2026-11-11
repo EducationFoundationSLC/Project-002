@@ -3,6 +3,10 @@ Project 002 - using publicly available data to view homes in Port Saint Lucie Fl
 PASLC data files are located here: https://www.paslc.gov/231/Data-Requests
 
 
+## Learning guide
+
+New to the project? [HOW_WE_BUILT_IT.md](HOW_WE_BUILT_IT.md) walks through how the website was built, step by step, with commented code examples.
+
 ## Property browser website
 
 A local website that lists every parcel in Saint Lucie County with filters.
