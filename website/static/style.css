@@ -97,6 +97,7 @@ td .addr { font-weight: 500; }
 td.owner { max-width: 220px; }
 td.owner div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 td.owner div + div { color: var(--muted, #666); font-size: .92em; }
+.badge.warn { background: #fdf0d5; color: #8a5300; }
 .badge { display: inline-block; font-size: 11px; padding: 0 6px; border-radius: 4px; background: var(--accent-soft); color: var(--accent); margin-left: 4px; }
 .empty { padding: 40px; text-align: center; color: var(--muted); }
 

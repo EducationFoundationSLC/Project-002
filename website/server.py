@@ -27,7 +27,7 @@ LIST_COLUMNS = [
     "land_use_desc", "owner", "owner2", "year_built", "living_area", "bedrooms", "full_baths",
     "half_baths", "acres", "pool", "homestead", "just_value", "assessed_value",
     "exemption_value", "exemptions", "taxable_value", "non_ad_valorem", "est_ad_valorem",
-    "est_tax", "millage", "last_sale_date", "last_sale_price", "lat", "lon",
+    "est_tax", "millage", "last_sale_date", "last_sale_price", "lat", "lon", "mail_status",
 ]
 SORTABLE = set(LIST_COLUMNS) | {"distance"}
 
@@ -49,6 +49,9 @@ MULTI_FILTERS = {  # param -> column; comma-separated values, OR'd together
     "jurisdiction": "jurisdiction", "zip": "zip",
 }
 FLAG_FILTERS = {"pool": "pool", "homestead": "homestead", "out_of_state": "out_of_state_owner"}
+# mail=... compares the owner's mailing address with the property address (see build_db.py).
+MAIL_FILTERS = {"same": ("same",), "different": ("different",), "po_box": ("po_box",),
+                "elsewhere": ("different", "po_box")}
 
 
 def db():
@@ -113,6 +116,10 @@ def build_where(q):
         if v in ("0", "1"):
             clauses.append(f"{col} = ?")
             args.append(int(v))
+    if q.get("mail"):
+        statuses = MAIL_FILTERS[q["mail"]]  # unknown values raise KeyError -> 400
+        clauses.append(f"mail_status IN ({','.join('?' * len(statuses))})")
+        args += statuses
     if q.get("exempt") in ("0", "1"):
         clauses.append("COALESCE(exemption_value,0) > 0" if q["exempt"] == "1"
                        else "COALESCE(exemption_value,0) = 0")

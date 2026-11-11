@@ -29,10 +29,17 @@ function shortExemptions(list) {
   return [...new Set(names.filter(Boolean))].join(", ");
 }
 
+// How the owner's mailing address compares with the property address (see build_db.py).
+const MAIL_TEXT = { same: "Same as property", different: "Different address", po_box: "PO box", elsewhere: "Different or PO box" };
+const MAIL_BADGE = {
+  different: '<span class="badge warn" title="Mailing address is different from the property address">Mail elsewhere</span>',
+  po_box: '<span class="badge warn" title="Mail goes to a PO box">PO box</span>',
+};
+
 // ---------- table columns ----------
 const C = {
   address: { label: "Address", sort: "address", cell: (r) => `<div class="addr">${esc(r.address || "(no address)")}${r.unit ? " #" + esc(r.unit) : ""}</div>
-      <div class="meta">${r.distance != null ? `<b>${r.distance} mi</b> · ` : ""}${esc(r.jurisdiction)} ${esc(r.zip || "")}${r.pool ? '<span class="badge">Pool</span>' : ""}${r.homestead ? '<span class="badge">HX</span>' : ""}</div>` },
+      <div class="meta">${r.distance != null ? `<b>${r.distance} mi</b> · ` : ""}${esc(r.jurisdiction)} ${esc(r.zip || "")}${r.pool ? '<span class="badge">Pool</span>' : ""}${r.homestead ? '<span class="badge">HX</span>' : ""}${MAIL_BADGE[r.mail_status] || ""}</div>` },
   type: { label: "Type", sort: "land_use_desc", cls: "hide-sm", cell: (r) => `<div>${esc(r.land_use_desc)}</div><div class="meta">${esc(r.category)}</div>` },
   owner: { label: "Owners", sort: "owner", cls: "owner hide-sm",
     cell: (r) => `<div>${esc(r.owner)}</div>${r.owner2 ? `<div>${esc(r.owner2)}</div>` : ""}`,
@@ -215,6 +222,7 @@ const FLAGS = ["homestead", "pool", "out_of_state", "improved", "exempt"];
 const MONEY_PARAMS = /^(just|taxable|assessed|tax|sale_price)_(min|max)$/;
 function chipLabel(k, v) {
   if (k === "near") { const n = nearState(); return `Within ${n.radius} mi of ${n.label}`; }
+  if (k === "mail") return `Mailing: ${MAIL_TEXT[v] || v}`;
   if (k === "selection") return `AI: ${state.filters.selection_label || "selected properties"}`;
   if (MULTI.includes(k)) return v.split(",").join(", ");
   if (FLAGS.includes(k)) return `${LABELS[k]}: ${v === "1" ? "yes" : "no"}`;
@@ -335,9 +343,19 @@ async function openDetail(id) {
       ${kv("Bedrooms / baths", d.bedrooms ? `${d.bedrooms} bd / ${d.full_baths} full, ${d.half_baths} half` : null)}
       ${kv("Buildings on parcel", d.buildings)}
       ${kv("Pool", d.pool ? "Yes" : "No")}</div>` : ""}
-    <h3>Owner</h3>
-    <div>${esc(d.owner)}${d.owner2 ? "<br>" + esc(d.owner2) : ""}</div>
-    <div class="meta">${esc(d.mailing_address)}</div>
+    <h3>Owner &amp; mailing address</h3>
+    <div>${[d.owner, d.owner2, d.owner3].filter(Boolean).map(esc).join("<br>")}</div>
+    <div class="kv addresses">
+      ${kv("Property address", `${esc(d.address || "(no address)")}${d.unit && !(d.address || "").includes(d.unit) ? " #" + esc(d.unit) : ""}<br>${esc(d.jurisdiction)} ${esc(d.zip || "")}`)}
+      ${kv("Mailing address", d.mail_line1 || d.mailing_address
+        ? [d.mail_line1, d.mail_line2].filter(Boolean).map(esc).join("<br>") +
+          (d.mail_line1 ? `<br>${esc([d.mail_city, d.mail_state, d.mail_zip].filter(Boolean).join(" "))}${d.mail_country ? "<br>" + esc(d.mail_country) : ""}` : esc(d.mailing_address))
+        : null)}
+    </div>
+    ${d.mail_status && d.mail_status !== "unknown" ? `<p class="meta">${d.mail_status === "same"
+      ? "✓ Mail goes to the property address."
+      : `⚠ Mail goes ${d.mail_status === "po_box" ? "to a PO box" : "to a different address"}.
+         ${d.homestead ? "This property has a homestead exemption, which requires the owner to live here as their permanent home. A different mailing address doesn't prove they don't (some people use a PO box, a relative's or a business address), but it can be worth a closer look." : ""}`}</p>` : ""}
     ${sales.length ? `<h3>Sales history</h3><table>
       <tr><th>Date</th><th class="num">Price</th><th>Type</th></tr>
       ${sales.map((s) => `<tr><td>${esc(s.sale_date)}</td><td class="num">${money(s.price)}</td><td>${esc(s.deed)}<div class="meta">${esc(s.qualification)}</div></td></tr>`).join("")}</table>` : ""}

@@ -47,7 +47,7 @@ WEBSITE_FILTERS = [
     "tax_min", "tax_max", "year_min", "year_max", "area_min", "area_max",
     "acres_min", "acres_max", "beds_min", "baths_min",
     "sale_price_min", "sale_price_max", "sold_after", "sold_before",
-    "pool", "homestead", "out_of_state", "improved", "exempt",
+    "pool", "homestead", "out_of_state", "improved", "exempt", "mail",
 ]
 SORT_COLUMNS = ["est_tax", "just_value", "assessed_value", "taxable_value", "exemption_value",
                 "year_built", "living_area", "acres", "last_sale_date", "last_sale_price",
@@ -131,6 +131,16 @@ Useful values:
 - property.jurisdiction: {jurisdictions}
 - exemptions.exemption_group (also the website's "exemption" filter): {exemption_groups}
 - Flags (0/1): property.pool, property.homestead, property.out_of_state_owner
+- property.mail_status compares the owner's mailing address (mail_line1, mail_line2,
+  mail_city, mail_state, mail_zip, mail_country) with the property address: 'same',
+  'different', 'po_box', or 'unknown' (no house number or no mailing address). The comparison
+  allows for spelling and abbreviation differences.
+
+Mailing addresses and homestead: a homestead exemption requires the owner to live in the
+property as their permanent home. A different mailing address can be a reason for a closer
+look, but it isn't proof: people use PO boxes, trusts, attorneys, relatives' addresses, and
+some owners just moved. Say this briefly when someone uses mailing addresses to question
+whether an owner lives at a property. Don't call anyone a cheater or say fraud happened.
 
 Website filters for show_on_website: category, land_use (land_use_desc values), jurisdiction,
 zip, exemption (exemption_group values) take comma-separated lists (OR'd). Ranges use _min/_max:
@@ -138,6 +148,7 @@ just, assessed, taxable, tax (est_tax), year (year_built), area (living_area), a
 sale_price; beds_min, baths_min; sold_after/sold_before (YYYY-MM-DD). Yes/no filters take "1"
 or "0": pool, homestead, out_of_state, improved (has buildings), exempt (has any exemption).
 q is a text search on address, owner, parcel and subdivision.
+mail takes one of: same, different, po_box, elsewhere (different or po_box).
 """
 
 # ---------------------------------------------------------------------------

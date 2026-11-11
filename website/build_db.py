@@ -10,9 +10,11 @@ Parcel shapes come from the county GIS exports in ../StLucieParcelShapefile and
 ../StLucieGIS_Summary.gdb (condo outlines). Both are optional.
 """
 import csv
+import difflib
 import glob
 import json
 import os
+import re
 import sqlite3
 import sys
 import time
@@ -471,6 +473,119 @@ def load_geometry(con):
           f"(matched by account number: {matched_by['account']:,}, by parcel ID: {matched_by['parcel id']:,})")
 
 
+# ---------------------------------------------------------------------------
+# Mailing addresses: is the owner's mail sent to the property itself?
+
+MAIL_CSV = "RealPropertyGeneralMailingInformation.csv"
+MAIL_COLS = ["PropertyID", "Owner3", "MailingAddress1", "MailingAddress2", "City", "State",
+             "ZipCode", "Country"]
+DIRECTIONS = {"N", "S", "E", "W", "NE", "NW", "SE", "SW", "NORTH", "SOUTH", "EAST", "WEST",
+              "NORTHEAST", "NORTHWEST", "SOUTHEAST", "SOUTHWEST"}
+STREET_TYPES = {"ST", "STREET", "AVE", "AV", "AVENUE", "RD", "ROAD", "DR", "DRIVE", "LN", "LANE",
+                "CT", "COURT", "CIR", "CIRCLE", "BLVD", "BV", "BOULEVARD", "WAY", "PL", "PLACE",
+                "TER", "TERR", "TERRACE", "PKWY", "PRKY", "PARKWAY", "TRL", "TRAIL",
+                "CV", "COVE", "LOOP", "RUN", "PATH", "PT", "POINT", "ROW", "SQ", "XING"}
+UNIT_WORDS = {"UNIT", "APT", "STE", "SUITE", "BLDG", "LOT", "SPC", "SPACE", "TRLR"}
+PO_BOX = re.compile(r"^(P\s*O\s*BOX|POST OFFICE BOX|PO BX|P O B|BOX)\s*\d", re.I)
+
+
+def street_key(address):
+    """'6710 N Kings Hwy, Unit 2' -> ('6710', 'KINGS', '2'): house number, street name and
+    unit, without directions or the street type. Comparing these ignores the many ways
+    the same address gets typed (N vs NORTH, HWY vs HIGHWAY, ST vs SAINT, 31ST vs 31)."""
+    address = (address or "").upper().replace("#", " UNIT ")
+    street, _, unit_text = address.partition(",")
+    words = re.sub(r"[^A-Z0-9 ]", " ", street).split()
+    if len(words) < 2 or not words[0][0].isdigit():
+        return None
+    name, unit, after_type = [], [], False
+    for i, w in enumerate(words[1:]):
+        if w in UNIT_WORDS:
+            unit = words[i + 2:]
+            break
+        if after_type and w not in DIRECTIONS:  # '10310 S Ocean Dr 103': text after the street type
+            unit = words[i + 1:]
+            break
+        if w in ("HWY", "HIGHWAY"):  # 'US Highway 1' -> 'US1', 'N Highway A1A' = 'N A1A'
+            continue
+        if w in ("ST", "SAINT") and not name:  # 'St Lucie Blvd' = 'Saint Lucie Blvd'
+            name.append("SAINT")
+        elif w in STREET_TYPES:
+            after_type = bool(name)
+        elif w not in DIRECTIONS:
+            name.append(re.sub(r"^(\d+)(ST|ND|RD|TH)$", r"\1", w))  # 31ST -> 31
+    unit += re.sub(r"[^A-Z0-9 ]", " ", unit_text).split()
+    unit = "".join(w for w in unit if w not in UNIT_WORDS)
+    return (words[0], "".join(name), unit) if name else None
+
+
+def _same_unit(a, b):
+    """Units match unless both are given and differ ('36' vs 'LOT 26'). Compares the digits
+    when there are any, so 'PHA06' = 'PH A6' and '402' = '402S'."""
+    if not a or not b:
+        return True
+    da, db = re.sub(r"\D", "", a).lstrip("0"), re.sub(r"\D", "", b).lstrip("0")
+    return da == db if (da or db) else (a.endswith(b) or b.endswith(a))  # 'FN' = 'PH FN'
+
+
+def _same_street(a, b):
+    """Same house number, nearly the same street name ('SABALWOOD' vs 'SABLEWOOD'),
+    and no conflicting unit numbers."""
+    if not a or not b or a[0] != b[0] or not _same_unit(a[2], b[2]):
+        return False
+    return (a[1] == b[1] or difflib.SequenceMatcher(None, a[1], b[1]).ratio() >= 0.8
+            or (min(len(a[1]), len(b[1])) >= 4 and (a[1].startswith(b[1]) or b[1].startswith(a[1]))))
+
+
+def mail_status(site, site_zip, mail1, mail2, mail_zip):
+    """'same', 'different', 'po_box', or 'unknown' (no usable site or mailing address)."""
+    if not site or not (mail1 or mail2):
+        return "unknown"
+    if PO_BOX.match(mail1 or "") or PO_BOX.match(mail2 or ""):
+        return "po_box"
+    site_key = street_key(site)
+    if site_key is None:
+        return "unknown"
+    same_street = _same_street(site_key, street_key(mail1)) or _same_street(site_key, street_key(mail2))
+    site_zip, mail_zip = (site_zip or "")[:5], (mail_zip or "")[:5]
+    # Local ZIP codes are often mixed up (34990 vs 34984), so any two 349xx ZIPs count as a match.
+    same_area = (not site_zip or not mail_zip or site_zip == mail_zip
+                 or (site_zip.startswith("349") and mail_zip.startswith("349")))
+    return "same" if same_street and same_area else "different"
+
+
+def add_mailing(con):
+    """Mailing address and owner 3 from the mailing CSV, plus property.mail_status."""
+    if not os.path.exists(os.path.join(CSV_DIR, MAIL_CSV)):
+        print(f"  {MAIL_CSV} not found; using the ownership file's mailing address")
+        con.execute("ALTER TABLE property ADD COLUMN mail_status TEXT")
+        return
+    load_raw(con, "raw_mail", MAIL_CSV, MAIL_COLS)
+    for col in ("owner3", "mail_line1", "mail_line2", "mail_city", "mail_state", "mail_zip",
+                "mail_country", "mail_status"):
+        con.execute(f"ALTER TABLE property ADD COLUMN {col} TEXT")
+    rows = con.execute("""
+        SELECT p.property_id, p.address, p.unit, p.zip, m.Owner3, m.MailingAddress1, m.MailingAddress2,
+               m.City, m.State, m.ZipCode, m.Country
+        FROM property p JOIN raw_mail m ON CAST(m.PropertyID AS INTEGER) = p.property_id""").fetchall()
+    updates, counts = [], {}
+    for pid, site, unit, site_zip, owner3, m1, m2, city, st, mzip, country in rows:
+        if site and unit and site.upper().endswith(" " + unit.upper()):
+            site = f"{site[:-len(unit)].strip()}, Unit {unit}"  # '3702 N HIGHWAY A1A 702'
+        status = mail_status(site, site_zip, m1, m2, mzip)
+        counts[status] = counts.get(status, 0) + 1
+        line2 = ", ".join(x for x in (m1, m2) if x)
+        full = ", ".join(x for x in (line2, " ".join(x for x in (city, st, mzip) if x), country) if x)
+        updates.append((owner3 or None, m1 or None, m2 or None, city or None, st or None, mzip or None,
+                        country or None, status, full or None, pid))
+    con.executemany("""UPDATE property SET owner3 = ?, mail_line1 = ?, mail_line2 = ?, mail_city = ?,
+        mail_state = ?, mail_zip = ?, mail_country = ?, mail_status = ?, mailing_address = ?
+        WHERE property_id = ?""", updates)
+    con.execute("CREATE INDEX ix_property_mail ON property(mail_status)")
+    con.execute("DROP TABLE raw_mail")
+    print("  mailing address vs property: " + ", ".join(f"{k} {v:,}" for k, v in sorted(counts.items())))
+
+
 def main():
     if "--geometry-only" in sys.argv:
         t0 = time.time()
@@ -497,6 +612,8 @@ def main():
     con.commit()
     print("Building property table...")
     con.executescript(BUILD_SQL)
+    print("Comparing mailing addresses...")
+    add_mailing(con)
     print("Estimating taxes...")
     add_tax_estimates(con)
     print("Loading parcel geometry...")

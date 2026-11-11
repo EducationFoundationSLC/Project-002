@@ -46,7 +46,14 @@ Only the Python 3 standard library is required. The generated database
   `build_db.py`.
 - **Building** – vacant vs. improved, year built, living area, bedrooms, baths,
   lot size, pool
-- **Sales & ownership** – last sale date and price, out-of-state owner
+- **Sales & ownership** – last sale date and price, out-of-state owner, and **mailing
+  address**: same as property, different address, PO box, or either of the last two. The
+  mailing address comes from `RealPropertyGeneralMailingInformation.csv`. `build_db.py`
+  compares it with the property address using the house number, street name, unit and
+  ZIP, so spelling differences ("Terr"/"Ter", "St"/"Saint", "N A1A"/"N Highway A1A")
+  still count as the same address. Addresses without a house number count as unknown. A
+  different mailing address is a reason for a closer look at a homestead property, not
+  proof that the owner doesn't live there.
 - Free-text search on address, owner, parcel ID, or subdivision
 
 Click a row to see full values, exemptions, non-ad valorem charges, building
