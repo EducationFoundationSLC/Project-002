@@ -248,22 +248,30 @@ function taxBill(d) {
   if (d.est_tax == null) return `<p class="meta">No assessment on the roll for this parcel, so no tax estimate.</p>`;
   const row = (l) => `<tr><td>${esc(l.authority)}</td><td class="num">${l.rate.toFixed(4)}</td>
       <td class="num">${money(l.taxable)}</td><td class="num">${cents(l.tax)}</td></tr>`;
-  const school = d.levies.filter((l) => l.school), other = d.levies.filter((l) => !l.school);
+  const group = (basis, title) => {
+    const ls = d.levies.filter((l) => l.basis === basis);
+    return ls.length ? `<tr class="group"><td colspan="4">${title}</td></tr>${ls.map(row).join("")}` : "";
+  };
   const mills = d.levies.reduce((a, l) => a + l.rate, 0);
   return `<table class="bill">
     <tr><th>Taxing authority</th><th class="num">Mills</th><th class="num">Taxable</th><th class="num">Tax</th></tr>
-    <tr class="group"><td colspan="4">School</td></tr>${school.map(row).join("")}
-    <tr class="group"><td colspan="4">County, city &amp; districts</td></tr>${other.map(row).join("")}
+    ${group("school", "School")}
+    ${group("county", "County")}
+    ${group("other", "City &amp; districts")}
     <tr><th>Ad valorem subtotal</th><th class="num">${mills.toFixed(4)}</th><th></th><th class="num">${cents(d.est_ad_valorem)}</th></tr>
     ${d.other_assessments.length ? `<tr class="group"><td colspan="4">Non-ad valorem assessments</td></tr>
       ${d.other_assessments.map((o) => `<tr><td colspan="3">${esc(o.description)}</td><td class="num">${cents(o.amount)}</td></tr>`).join("")}` : ""}
     <tr class="total"><th colspan="3">Estimated total tax</th><th class="num">${cents(d.est_tax)}</th></tr>
   </table>
   <p class="meta">Estimate using ${esc(d.rates_year)} final millage rates for tax district ${esc(d.tax_district)}.
-  School levies use the school taxable value: the second homestead exemption and the 10% non-homestead
-  assessment cap don't apply to school taxes. Your actual bill from the Tax Collector may differ, and paying
+  Each kind of tax uses its own taxable value: the second homestead exemption and the 10% non-homestead
+  assessment cap don't apply to school taxes, and the senior exemption only applies to county taxes. Your actual bill from the Tax Collector may differ, and paying
   in November gets a 4% discount.</p>`;
 }
+
+// The Property Appraiser's TRIM (Truth in Millage) notice PDF, keyed by PropertyID.
+// We link to it rather than download it: the county's server only serves it to browsers.
+const TRIM_URL = "https://api.paslc.gov/TrimPrint/api/pdf/INLINE/";
 
 async function openDetail(id) {
   const res = await fetch("/api/property/" + encodeURIComponent(id));
@@ -296,6 +304,7 @@ async function openDetail(id) {
       ${kv("Assessed value", `<b>${money(d.assessed_value)}</b>`)}
       ${kv("Exemptions", d.exemption_value ? money(-d.exemption_value) : "$0")}
       ${kv("Taxable value", `<b>${money(d.taxable_value)}</b>`)}
+      ${d.district_taxable !== d.taxable_value ? kv("City &amp; district taxable value", money(d.district_taxable)) : ""}
       ${d.school_taxable !== d.taxable_value ? kv("School taxable value", money(d.school_taxable)) : ""}
       ${d.just_value > d.assessed_value ? kv("Assessment cap savings", money(d.just_value - d.assessed_value)) : ""}
     </div>
@@ -306,6 +315,10 @@ async function openDetail(id) {
       : `<p class="meta">None</p>`}
     <h3>Estimated taxes</h3>
     ${taxBill(d)}
+    <div class="map-actions">
+      <a class="ghost" target="_blank" rel="noopener" href="${TRIM_URL}${encodeURIComponent(d.property_id)}">Official TRIM notice (PDF) ↗</a>
+    </div>
+    <p class="meta">The Property Appraiser's Truth in Millage notice: official values and proposed taxes for this property.</p>
     ${d.geometry ? `<h3>Lot drawing</h3>
     <div class="plat">${platSvg(d)}</div>
     <div class="map-actions">

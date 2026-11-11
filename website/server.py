@@ -215,11 +215,14 @@ def api_property(pid):
             "SELECT description, grant_year FROM exemptions WHERE property_id = ?", (pid,))]
         detail["other_assessments"] = [dict(r) for r in con.execute(
             "SELECT description, amount FROM other_assessments WHERE property_id = ?", (pid,))]
+        taxable_for = {"school": detail["school_taxable"], "county": detail["taxable_value"],
+                       "other": detail["district_taxable"]}
         detail["levies"] = [
-            {**dict(r), "taxable": (detail["school_taxable"] if r["school"] else detail["taxable_value"])}
+            {**dict(r), "taxable": taxable_for[r["basis"]]}
             for r in con.execute(
-                "SELECT levy_code, authority, school, rate FROM levies "
-                "WHERE district_group = ? ORDER BY school DESC, rate DESC", (detail["tax_district"],))]
+                "SELECT levy_code, authority, basis, school, rate FROM levies WHERE district_group = ? "
+                "ORDER BY CASE basis WHEN 'school' THEN 0 WHEN 'county' THEN 1 ELSE 2 END, rate DESC",
+                (detail["tax_district"],))]
         for lv in detail["levies"]:
             lv["tax"] = round((lv["taxable"] or 0) * lv["rate"] / 1000, 2)
         detail["rates_year"] = con.execute("SELECT value FROM meta WHERE key='rates_year'").fetchone()[0]

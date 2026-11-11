@@ -55,9 +55,38 @@ The CSVs contain values and exemptions but not tax rates. `website/tax_rates.csv
 holds the millage for each levy and the tax district groups it applies to, taken from
 the Florida DOR "2025 Final Millage Rates" for Saint Lucie County. Each parcel's
 estimate is its taxable value times its district's millage, plus non-ad valorem
-assessments. School levies use the school taxable value, which excludes the second
-homestead exemption and the 10% non-homestead assessment cap. When new rates are
-adopted, edit `tax_rates.csv`, set `RATES_YEAR` in `build_db.py`, and rebuild.
+assessments. The `basis` column says which taxable value each levy uses, matching the
+TRIM notice:
+
+- `county`: the roll's taxable value, after all exemptions.
+- `other` (cities and independent districts): adds back the senior exemption, which
+  only applies to county levies.
+- `school`: only the first $25,000 homestead exemption applies, and the 10%
+  non-homestead assessment cap doesn't.
+
+When new rates are adopted, edit `tax_rates.csv`, set `RATES_YEAR` in `build_db.py`,
+and rebuild.
+
+The 2025 rates were checked against the "last year" column of a 2026 TRIM notice, and
+they match. As of November 2026, the Florida DOR hadn't yet posted its 2026 St. Lucie
+rate table (the "2026 Saint Lucie TACD" PDF in the DOR data portal's TACD History
+folder). Switch to 2026 when it's posted. These 2026 final rates are already known:
+
+| Levy | 2026 rate |
+|---|---|
+| School (state required) | 2.9970 |
+| School (local board) | 3.2480 (unchanged) |
+| Port St. Lucie | 4.6107 |
+| PSL Voted Debt | 0.2643 |
+| Fort Pierce | 6.9000 (unchanged) |
+
+The county's final 2026 rates still need an official source. The TRIM notice proposed
+lowering the General Fund to 4.0441. Each property also links to its official TRIM notice from the Property
+Appraiser.
+
+Known gap: the City of Port St. Lucie solid waste fee (about $482 on a 2026 TRIM notice)
+isn't in the Property Appraiser's CSV export, so it's missing from estimates for PSL
+properties.
 
 ### Maps and lot drawings
 

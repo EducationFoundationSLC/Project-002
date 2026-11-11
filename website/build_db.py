@@ -22,6 +22,7 @@ CSV_DIR = os.path.join(HERE, "..", "PASLC")
 RATES_CSV = os.path.join(HERE, "tax_rates.csv")
 RATES_YEAR = 2025  # year of the millage in tax_rates.csv (DOR "2025 Final Millage Rates")
 FIRST_HOMESTEAD = 25000  # the only homestead exemption that applies to school levies
+SENIOR_EXEMPTION = 25000  # St. Lucie County's senior exemption; county levies only
 
 # Community Redevelopment Area district groups levy the same millage as their parent.
 DISTRICT_GROUP_ALIAS = {
@@ -239,22 +240,30 @@ CREATE INDEX ix_legal_pid ON legal(property_id);
 def add_tax_estimates(con):
     """Estimate each parcel's tax bill from tax_rates.csv.
 
-    The roll's taxable value is the non-school value. School levies differ in two ways:
-    only the first $25,000 homestead exemption applies, and the 10% non-homestead
-    assessment cap does not apply (school assessed value = just value).
+    Each levy is charged on one of three taxable values (the "basis" column):
+      county - the roll's taxable value (TotalTaxableValue), after every exemption.
+      other  - city, fire, water management and other districts. The senior exemption
+               is county-only, so these levies add it back.
+      school - only the first $25,000 homestead exemption applies, and the 10%
+               non-homestead assessment cap does not (school assessed value = just value).
+    Checked against a 2026 TRIM notice: Column 1 (2025 rates) and the per-authority
+    taxable values match.
     """
     con.executescript("""
         DROP TABLE IF EXISTS levies;
         CREATE TABLE levies (district_group TEXT, levy_code TEXT, authority TEXT,
-                             school INTEGER, rate REAL);
+                             basis TEXT, school INTEGER, rate REAL);
         DROP TABLE IF EXISTS meta;
         CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
     """)
     with open(RATES_CSV, newline="", encoding="utf-8") as fh:
         for r in csv.DictReader(fh):
+            if r["basis"] not in ("county", "other", "school"):
+                raise ValueError(f"{r['levy_code']}: basis must be county, other or school")
             for group in r["district_groups"].split():
-                con.execute("INSERT INTO levies VALUES (?,?,?,?,?)",
-                            (group, r["levy_code"], r["authority"], int(r["school"]), float(r["rate"])))
+                con.execute("INSERT INTO levies VALUES (?,?,?,?,?,?)",
+                            (group, r["levy_code"], r["authority"], r["basis"],
+                             int(r["basis"] == "school"), float(r["rate"])))
     con.execute("INSERT INTO meta VALUES ('rates_year', ?)", (str(RATES_YEAR),))
 
     # Size of the second (non-school) homestead exemption on this roll, e.g. 26,411.
@@ -266,17 +275,27 @@ def add_tax_estimates(con):
     con.execute("INSERT INTO meta VALUES ('second_homestead', ?)", (str(second_hx),))
 
     cases = " ".join(f"WHEN '{k}' THEN '{v}'" for k, v in DISTRICT_GROUP_ALIAS.items())
+    # The second homestead exemption ($25,000-$50,000 band) doesn't apply to schools.
+    additional_hx = f"MIN({second_hx}, MAX(0, assessed_value - {FIRST_HOMESTEAD * 2}))"
     con.executescript(f"""
         ALTER TABLE property ADD COLUMN tax_district TEXT;
+        ALTER TABLE property ADD COLUMN senior_exemption INTEGER;
+        ALTER TABLE property ADD COLUMN district_taxable INTEGER;
         ALTER TABLE property ADD COLUMN school_taxable INTEGER;
         ALTER TABLE property ADD COLUMN millage REAL;
         ALTER TABLE property ADD COLUMN est_ad_valorem REAL;
         ALTER TABLE property ADD COLUMN est_tax REAL;
         UPDATE property SET tax_district = CASE district_group {cases} ELSE district_group END;
+        -- The senior exemption only reduces county levies. Its amount isn't in the
+        -- data, so take it from what's left of the total after the homestead exemptions.
+        UPDATE property SET senior_exemption = CASE
+            WHEN exemptions LIKE '%Senior Homestead%' AND COALESCE(taxable_value, 0) > 0
+            THEN MIN({SENIOR_EXEMPTION}, MAX(0, exemption_value - {FIRST_HOMESTEAD} - {additional_hx}))
+            ELSE 0 END;
+        UPDATE property SET district_taxable = taxable_value + senior_exemption;
         UPDATE property SET school_taxable = CASE
             WHEN taxable_value IS NULL OR taxable_value = 0 THEN taxable_value
-            WHEN homestead = 1 THEN taxable_value
-                 + MIN({second_hx}, MAX(0, assessed_value - {FIRST_HOMESTEAD * 2}))
+            WHEN homestead = 1 THEN taxable_value + {additional_hx} + senior_exemption
             WHEN COALESCE(ag_credit, 0) = 0 AND just_value > assessed_value
                  THEN taxable_value + (just_value - assessed_value)
             ELSE taxable_value END;
@@ -284,12 +303,14 @@ def add_tax_estimates(con):
         CREATE TEMP TABLE _rates AS
             SELECT district_group,
                    SUM(rate) AS millage,
-                   SUM(CASE WHEN school = 1 THEN rate ELSE 0 END) AS school_mills,
-                   SUM(CASE WHEN school = 0 THEN rate ELSE 0 END) AS other_mills
+                   SUM(CASE WHEN basis = 'county' THEN rate ELSE 0 END) AS county_mills,
+                   SUM(CASE WHEN basis = 'other'  THEN rate ELSE 0 END) AS other_mills,
+                   SUM(CASE WHEN basis = 'school' THEN rate ELSE 0 END) AS school_mills
             FROM levies GROUP BY district_group;
         UPDATE property SET
             millage = (SELECT millage FROM _rates r WHERE r.district_group = property.tax_district),
-            est_ad_valorem = ROUND((SELECT (other_mills * property.taxable_value
+            est_ad_valorem = ROUND((SELECT (county_mills * property.taxable_value
+                                           + other_mills * property.district_taxable
                                            + school_mills * property.school_taxable) / 1000.0
                                     FROM _rates r WHERE r.district_group = property.tax_district), 2);
         UPDATE property SET est_tax = ROUND(COALESCE(est_ad_valorem, 0) + COALESCE(non_ad_valorem, 0), 2);
