@@ -1321,18 +1321,17 @@
     // ----------------------------------------------------------------- Results Map
     function baseLayers() {
       return {
-        Streets: L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-          subdomains: "abcd",
+        Streets: L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
           maxZoom: 20, maxNativeZoom: 19,
-          attribution: "&copy; OpenStreetMap contributors &copy; CARTO"
+          attribution: "&copy; Esri, HERE, Garmin, OpenStreetMap contributors"
+        }),
+        OpenStreetMap: L.tileLayer("https://tile.openstreetmap.de/{z}/{x}/{y}.png", {
+          maxZoom: 20, maxNativeZoom: 19,
+          attribution: "&copy; OpenStreetMap contributors"
         }),
         Satellite: L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
           maxZoom: 20, maxNativeZoom: 19,
           attribution: "Imagery &copy; Esri, Maxar, Earthstar Geographics"
-        }),
-        "Esri Streets": L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
-          maxZoom: 20, maxNativeZoom: 19,
-          attribution: "&copy; Esri"
         })
       };
     }
