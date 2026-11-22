@@ -708,27 +708,82 @@
       color: var(--text-secondary);
     }
 
-    /* Footer */
+    /* Footer (Apple.com directory style) */
     footer {
       background: var(--bg-alt);
       border-top: 1px solid var(--border);
-      padding: 36px 22px 48px;
+      padding: 20px 22px 28px;
       font-size: 12px;
+      line-height: 1.45;
       color: var(--text-secondary);
     }
     .footer-inner { max-width: var(--max-w); margin: 0 auto; }
     .footer-notes {
-      padding-bottom: 20px;
-      border-bottom: 1px solid var(--border);
+      padding: 12px 0 18px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.12);
       line-height: 1.6;
+      color: var(--text-secondary);
     }
+    .footer-notes p { margin: 0 0 8px; }
+    .footer-notes p:last-child { margin-bottom: 0; }
+    .footer-directory {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 24px 28px;
+      padding: 24px 0 26px;
+    }
+    .footer-col h3 {
+      margin: 0 0 10px;
+      font-family: var(--font-body);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.005em;
+    }
+    .footer-col ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .footer-col li { margin-bottom: 7px; }
+    .footer-col li:last-child { margin-bottom: 0; }
+    .footer-col a {
+      color: #424245;
+      text-decoration: none;
+    }
+    .footer-col a:hover {
+      color: var(--text);
+      text-decoration: underline;
+    }
+    .footer-callout {
+      padding-bottom: 14px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+      color: var(--text-secondary);
+    }
+    .footer-callout a { color: var(--link); }
     .footer-bottom {
-      padding-top: 18px;
+      padding-top: 14px;
       display: flex;
       justify-content: space-between;
+      align-items: center;
       flex-wrap: wrap;
-      gap: 12px;
+      gap: 10px 20px;
+      color: var(--text-secondary);
     }
+    .footer-legal-links {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 0;
+    }
+    .footer-legal-links a {
+      color: #424245;
+      padding: 0 10px;
+      border-right: 1px solid rgba(0, 0, 0, 0.18);
+    }
+    .footer-legal-links a:first-child { padding-left: 0; }
+    .footer-legal-links a:last-child { border-right: 0; padding-right: 0; }
+    .footer-legal-links a:hover { color: var(--text); text-decoration: underline; }
 
     /* Responsive */
     @media (max-width: 900px) {
@@ -736,6 +791,7 @@
       .filters-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .bento { grid-template-columns: 1fr; }
       .bento-card.wide { grid-column: auto; }
+      .footer-directory { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
     @media (max-width: 600px) {
       .nav-links { display: none; }
@@ -743,6 +799,7 @@
       .filters-grid { grid-template-columns: 1fr; }
       .kv-grid { grid-template-columns: 1fr; }
       .sheet { padding: 20px 18px 40px; }
+      .footer-directory { grid-template-columns: 1fr; gap: 20px; }
     }
   </style>
 </head>
@@ -985,17 +1042,69 @@
     </div>
   </section>
 
-  <!-- Footer -->
+  <!-- Footer (Apple.com style) -->
   <footer>
     <div class="footer-inner">
       <div class="footer-notes">
-        1. Parcel attributes and polygon boundaries are queried live from the Saint Lucie County Property Appraiser public GIS service (map.paslc.gov).<br>
-        2. Ad valorem tax estimates use the 2026 Final Millage Rates from Project-002's tax_rates.csv. Official bills and non-ad valorem fees are published by the Property Appraiser and Tax Collector.<br>
-        3. Lot drawings are measured from county GIS parcel boundaries and are for reference only, not a legal survey.
+        <p>1. Parcel attributes and polygon boundaries are sourced from the Saint Lucie County Property Appraiser public GIS service (map.paslc.gov) or your local Project-002 SQLite database.</p>
+        <p>2. Ad valorem tax estimates use the 2026 Final Millage Rates from Project-002's tax_rates.csv. Official tax bills and non-ad valorem assessments are published by the Property Appraiser and Tax Collector.</p>
+        <p>3. Lot drawings are measured from county GIS parcel boundaries and are for reference only, not a legal survey.</p>
       </div>
+
+      <nav class="footer-directory" aria-label="Footer directory">
+        <div class="footer-col">
+          <h3>Property &amp; Tax</h3>
+          <ul>
+            <li><a href="https://www.paslc.gov/" target="_blank" rel="noopener">St. Lucie Property Appraiser</a></li>
+            <li><a href="https://www.paslc.gov/231/Data-Requests" target="_blank" rel="noopener">PASLC Data Requests</a></li>
+            <li><a href="https://www.tcslc.com/" target="_blank" rel="noopener">St. Lucie Tax Collector</a></li>
+            <li><a href="#tax">2026 TRIM &amp; Millage Rates</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h3>County &amp; Municipalities</h3>
+          <ul>
+            <li><a href="https://www.stlucieco.gov/" target="_blank" rel="noopener">St. Lucie County Government</a></li>
+            <li><a href="https://gis.stlucieco.gov/hub/" target="_blank" rel="noopener">St. Lucie GIS Open Data Hub</a></li>
+            <li><a href="https://www.cityofpsl.com/" target="_blank" rel="noopener">City of Port St. Lucie</a></li>
+            <li><a href="https://www.cityoffortpierce.com/" target="_blank" rel="noopener">City of Fort Pierce</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h3>Education Foundation</h3>
+          <ul>
+            <li><a href="https://www.educationfoundationstlucie.org/" target="_blank" rel="noopener">Education Foundation of St. Lucie County</a></li>
+            <li><a href="https://github.com/EducationFoundationSLC" target="_blank" rel="noopener">EducationFoundationSLC GitHub</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h3>Project-002</h3>
+          <ul>
+            <li><a href="https://github.com/EducationFoundationSLC/Project-002" target="_blank" rel="noopener">Source Code on GitHub</a></li>
+            <li><a href="#top">Overview</a></li>
+            <li><a href="#browse">Property Browser</a></li>
+            <li><a href="#tax">Tax Methodology</a></li>
+          </ul>
+        </div>
+      </nav>
+
+      <div class="footer-callout">
+        Public parcel data provided by the <a href="https://www.paslc.gov/" target="_blank" rel="noopener">Saint Lucie County Property Appraiser</a>.
+        Explore or contribute on <a href="https://github.com/EducationFoundationSLC/Project-002" target="_blank" rel="noopener">GitHub</a>.
+      </div>
+
       <div class="footer-bottom">
-        <span>Project-002 &middot; EducationFoundationSLC</span>
-        <span class="mono">Branch: prototype/website-draft</span>
+        <span>Project-002 &middot; Education Foundation of St. Lucie County</span>
+        <div class="footer-legal-links">
+          <a href="https://www.educationfoundationstlucie.org/" target="_blank" rel="noopener">Education Foundation</a>
+          <a href="https://github.com/EducationFoundationSLC/Project-002" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://www.paslc.gov/" target="_blank" rel="noopener">PASLC</a>
+          <a href="https://www.stlucieco.gov/" target="_blank" rel="noopener">St. Lucie County</a>
+        </div>
+        <span>St. Lucie County, FL</span>
       </div>
     </div>
   </footer>
