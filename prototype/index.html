@@ -37,6 +37,7 @@
     }
 
     * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
     html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
     body {
       margin: 0;
@@ -1320,13 +1321,18 @@
     // ----------------------------------------------------------------- Results Map
     function baseLayers() {
       return {
-        Streets: L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        Streets: L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+          subdomains: "abcd",
           maxZoom: 20, maxNativeZoom: 19,
-          attribution: "&copy; OpenStreetMap contributors"
+          attribution: "&copy; OpenStreetMap contributors &copy; CARTO"
         }),
         Satellite: L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
           maxZoom: 20, maxNativeZoom: 19,
           attribution: "Imagery &copy; Esri, Maxar, Earthstar Geographics"
+        }),
+        "Esri Streets": L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
+          maxZoom: 20, maxNativeZoom: 19,
+          attribution: "&copy; Esri"
         })
       };
     }
@@ -1339,7 +1345,7 @@
       init() {
         if (this.map) return;
         const layers = baseLayers();
-        this.map = L.map("map", { preferCanvas: true, layers: [layers.Streets] }).setView([27.2730, -80.3582], 14);
+        this.map = L.map("map", { preferCanvas: true, layers: [layers.Streets] }).setView([27.2730, -80.3582], 16);
         L.control.layers(layers, null, { position: "topright" }).addTo(this.map);
         this.layer = L.layerGroup().addTo(this.map);
         this.map.on("moveend", () => this.refresh());
