@@ -63,7 +63,7 @@
     .global-nav {
       position: sticky;
       top: 0;
-      z-index: 100;
+      z-index: 1100;
       height: 44px;
       background: var(--nav-bg);
       backdrop-filter: saturate(180%) blur(20px);
@@ -490,6 +490,9 @@
 
     /* Map View */
     .map-card {
+      position: relative;
+      z-index: 0;
+      isolation: isolate;
       border: 1px solid var(--border);
       border-radius: var(--radius-lg);
       overflow: hidden;
@@ -586,7 +589,7 @@
     .sheet-backdrop {
       position: fixed;
       inset: 0;
-      z-index: 200;
+      z-index: 2000;
       background: rgba(0, 0, 0, 0.36);
       display: flex;
       justify-content: flex-end;
@@ -636,6 +639,9 @@
     .sheet-close:hover { background: #e8e8ed; color: var(--text); }
 
     .parcel-map {
+      position: relative;
+      z-index: 0;
+      isolation: isolate;
       height: 240px;
       width: 100%;
       border-radius: var(--radius-md);
