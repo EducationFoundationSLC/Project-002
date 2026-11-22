@@ -1138,7 +1138,23 @@
       return data;
     }
 
-    // App state
+    // App state (auto-detects local website/server.py /api/* backend; falls back to live PASLC GIS)
+    let dataMode = "paslc"; // "local" | "paslc"
+
+    const LOCAL_SORT_MAP = {
+      SiteAddress: "address",
+      Owner1: "owner",
+      TotalAppraisedValue: "just_value",
+      TotalAssessedValue: "assessed_value",
+      TotalExemptionValue: "exemption_value",
+      TotalTaxableValue: "est_tax",
+      LandUseCodeDescription: "land_use_desc",
+      YearBuilt: "year_built",
+      Beds: "bedrooms",
+      TotalArea: "acres",
+      SalePrice: "last_sale_price"
+    };
+
     const state = {
       view: "tax",
       page: 1,
@@ -1147,6 +1163,61 @@
       sortDir: "DESC",
       near: null // { lat, lon, radius, label }
     };
+
+    function buildLocalParams() {
+      const p = new URLSearchParams();
+      const q = document.getElementById("search").value.trim();
+      if (q) p.set("q", q);
+      const cat = document.getElementById("f-category").value;
+      if (cat) p.set("category", cat);
+      const jur = document.getElementById("f-jurisdiction").value;
+      if (jur) p.set("jurisdiction", jur);
+      const ex = document.getElementById("f-exempt").value;
+      if (ex) p.set("exempt", ex);
+      const imp = document.getElementById("f-improved").value;
+      if (imp === "Improved") p.set("improved", "1");
+      else if (imp === "Vacant") p.set("improved", "0");
+      const st = document.getElementById("f-state").value;
+      if (st === "oos") p.set("out_of_state", "1");
+      else if (st === "fl") p.set("out_of_state", "0");
+      if (state.near) {
+        p.set("near", `${state.near.lat.toFixed(5)},${state.near.lon.toFixed(5)}`);
+        p.set("radius", String(state.near.radius));
+      }
+      return p;
+    }
+
+    function normalizeLocalRow(r) {
+      return {
+        attributes: {
+          PropertyID: r.property_id,
+          ParcelID: r.parcel_id,
+          SiteAddress: r.address + (r.unit ? ` #${r.unit}` : ""),
+          SiteCity: r.jurisdiction,
+          SiteZIP: r.zip,
+          LandUseCode: "",
+          LandUseCodeDescription: r.land_use_desc,
+          _category: r.category,
+          Owner1: r.owner,
+          Owner2: r.owner2,
+          _mailStatus: r.mail_status,
+          YearBuilt: r.year_built,
+          Beds: r.bedrooms,
+          Baths: r.full_baths ? (r.full_baths + (r.half_baths ? 0.5 : 0)) : 0,
+          TotalArea: r.acres ? r.acres * 43560 : 0,
+          TotalAppraisedValue: r.just_value,
+          TotalAssessedValue: r.assessed_value,
+          TotalExemptionValue: r.exemption_value,
+          TotalTaxableValue: r.taxable_value,
+          _estTax: r.est_tax,
+          _exemptions: r.exemptions,
+          SaleDate: r.last_sale_date,
+          SalePrice: r.last_sale_price,
+          XCoordinate: r.lon,
+          YCoordinate: r.lat
+        }
+      };
+    }
 
     function buildWhere() {
       const clauses = [];
@@ -1232,26 +1303,27 @@
       }
       tbody.innerHTML = features.map(f => {
         const a = f.attributes;
-        const cat = categoryFromCode(a.LandUseCode);
+        const cat = a._category || categoryFromCode(a.LandUseCode);
         const addr = (a.SiteAddress || "").trim() || "(No street address)";
         const city = a.SiteCity === "Saint Lucie County" ? "Unincorporated" : (a.SiteCity || "");
         if (state.view === "property") {
           const acres = a.TotalArea ? (a.TotalArea / 43560).toFixed(2) : "—";
           const bdba = a.Beds ? `${a.Beds} / ${a.Baths ?? 0}` : "—";
+          const saleDateStr = typeof a.SaleDate === "string" ? a.SaleDate : fmtDate(a.SaleDate);
           return `<tr data-id="${a.PropertyID}">
             <td><div class="addr-main">${esc(addr)}</div><div class="addr-sub">${esc(city)} ${esc(a.SiteZIP || "")} &middot; <span class="mono">${esc(a.ParcelID)}</span></div></td>
             <td><div>${esc(a.LandUseCodeDescription || cat)}</div><div class="addr-sub">${esc(cat)}</div></td>
             <td class="num">${a.YearBuilt || "—"}</td>
             <td class="num">${esc(bdba)}</td>
             <td class="num">${acres}</td>
-            <td class="num">${a.SalePrice ? fmtUSD(a.SalePrice) : "—"}<div class="addr-sub">${fmtDate(a.SaleDate)}</div></td>
+            <td class="num">${a.SalePrice ? fmtUSD(a.SalePrice) : "—"}<div class="addr-sub">${esc(saleDateStr)}</div></td>
           </tr>`;
         }
-        const ms = mailStatus(a);
+        const ms = a._mailStatus || mailStatus(a);
         const mailPill = ms === "po_box" ? `<span class="pill warn">PO Box</span>`
           : ms === "different" ? `<span class="pill warn">Mail elsewhere</span>`
           : (a.MailState && a.MailState !== "FL") ? `<span class="pill warn">${esc(a.MailState)}</span>` : "";
-        const est = estimateTax(a.DistrictGroup, a.TotalTaxableValue);
+        const estTotal = a._estTax != null ? a._estTax : estimateTax(a.DistrictGroup, a.TotalTaxableValue).total;
         const exVal = Number(a.TotalExemptionValue || 0);
         return `<tr data-id="${a.PropertyID}">
           <td><div class="addr-main">${esc(addr)}</div><div class="addr-sub">${esc(city)} ${esc(a.SiteZIP || "")} &middot; ${esc(cat)}</div></td>
@@ -1262,7 +1334,7 @@
           <td class="num">${fmtUSD(a.TotalAppraisedValue)}</td>
           <td class="num">${fmtUSD(a.TotalAssessedValue)}</td>
           <td class="num">${exVal > 0 ? `<span class="pill ok">−${fmtUSD(exVal)}</span>` : "—"}</td>
-          <td class="num tax-val">${est.total != null ? fmtUSD2(est.total) : "—"}<div class="addr-sub">Taxable ${fmtUSD(a.TotalTaxableValue)}</div></td>
+          <td class="num tax-val">${estTotal != null ? fmtUSD2(estTotal) : "—"}<div class="addr-sub">Taxable ${fmtUSD(a.TotalTaxableValue)}</div></td>
         </tr>`;
       }).join("");
     }
@@ -1280,31 +1352,52 @@
       const statsEl = document.getElementById("results-stats");
 
       try {
-        const [countRes, pageRes] = await Promise.all([
-          queryPaslc({ where, returnCountOnly: "true", ...spatial }, listAbort.signal),
-          queryPaslc({
-            where,
-            outFields: LIST_FIELDS,
-            orderByFields: `${state.sortBy} ${state.sortDir}`,
-            resultOffset: String((state.page - 1) * PAGE_SIZE),
-            resultRecordCount: String(PAGE_SIZE),
-            returnGeometry: "false",
-            ...spatial
-          }, listAbort.signal)
-        ]);
+        if (dataMode === "local") {
+          const params = buildLocalParams();
+          params.set("page", String(state.page));
+          params.set("size", String(PAGE_SIZE));
+          params.set("sort", LOCAL_SORT_MAP[state.sortBy] || "just_value");
+          params.set("dir", state.sortDir.toLowerCase());
+          const res = await fetch("/api/properties?" + params.toString(), { signal: listAbort.signal });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          state.total = data.total || 0;
+          const features = (data.rows || []).map(normalizeLocalRow);
+          renderRows(features);
+          const s = data.summary || {};
+          statsEl.innerHTML = `
+            <span><strong>${state.total.toLocaleString()}</strong> matching parcel${state.total === 1 ? "" : "s"}</span>
+            <span>Total just value <strong>${fmtUSD(s.just)}</strong></span>
+            <span>Total taxable <strong>${fmtUSD(s.taxable)}</strong></span>
+            <span>Total est. tax / yr <strong>${fmtUSD(s.tax)}</strong></span>
+          `;
+        } else {
+          const [countRes, pageRes] = await Promise.all([
+            queryPaslc({ where, returnCountOnly: "true", ...spatial }, listAbort.signal),
+            queryPaslc({
+              where,
+              outFields: LIST_FIELDS,
+              orderByFields: `${state.sortBy} ${state.sortDir}`,
+              resultOffset: String((state.page - 1) * PAGE_SIZE),
+              resultRecordCount: String(PAGE_SIZE),
+              returnGeometry: "false",
+              ...spatial
+            }, listAbort.signal)
+          ]);
 
-        state.total = countRes.count || 0;
-        const features = pageRes.features || [];
-        renderRows(features);
+          state.total = countRes.count || 0;
+          const features = pageRes.features || [];
+          renderRows(features);
 
-        const pageJust = features.reduce((s, f) => s + Number(f.attributes.TotalAppraisedValue || 0), 0);
-        const pageTax = features.reduce((s, f) => s + (estimateTax(f.attributes.DistrictGroup, f.attributes.TotalTaxableValue).total || 0), 0);
-        statsEl.innerHTML = `
-          <span><strong>${state.total.toLocaleString()}</strong> matching parcel${state.total === 1 ? "" : "s"}</span>
-          <span>Showing <strong>${features.length}</strong> on this page</span>
-          <span>Page just value <strong>${fmtUSD(pageJust)}</strong></span>
-          <span>Page est. ad valorem <strong>${fmtUSD(pageTax)}</strong></span>
-        `;
+          const pageJust = features.reduce((s, f) => s + Number(f.attributes.TotalAppraisedValue || 0), 0);
+          const pageTax = features.reduce((s, f) => s + (estimateTax(f.attributes.DistrictGroup, f.attributes.TotalTaxableValue).total || 0), 0);
+          statsEl.innerHTML = `
+            <span><strong>${state.total.toLocaleString()}</strong> matching parcel${state.total === 1 ? "" : "s"}</span>
+            <span>Showing <strong>${features.length}</strong> on this page</span>
+            <span>Page just value <strong>${fmtUSD(pageJust)}</strong></span>
+            <span>Page est. ad valorem <strong>${fmtUSD(pageTax)}</strong></span>
+          `;
+        }
 
         const pages = Math.max(1, Math.ceil(state.total / PAGE_SIZE));
         document.getElementById("page-info").textContent = `Page ${state.page.toLocaleString()} of ${pages.toLocaleString()}`;
@@ -1313,8 +1406,8 @@
       } catch (err) {
         if (err.name === "AbortError") return;
         tbody.classList.remove("loading");
-        tbody.innerHTML = `<tr><td colspan="6" class="empty-state">Could not reach map.paslc.gov (${esc(err.message)}). Check your internet connection.</td></tr>`;
-        statsEl.textContent = "Unable to load live data.";
+        tbody.innerHTML = `<tr><td colspan="6" class="empty-state">Could not load parcels (${esc(err.message)}).</td></tr>`;
+        statsEl.textContent = "Unable to load parcel data.";
       }
     }
 
@@ -1382,6 +1475,36 @@
         status.textContent = "Loading parcels…";
 
         try {
+          if (dataMode === "local") {
+            const p = buildLocalParams();
+            p.set("bbox", bbox);
+            if (wantShapes) p.set("shapes", "1");
+            const res = await fetch("/api/map?" + p.toString(), { signal: this.abort.signal });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            this.layer.clearLayers();
+            if (data.truncated) {
+              status.textContent = `${data.total.toLocaleString()} parcels in view — zoom in or filter to display them`;
+              return;
+            }
+            if (!data.features.length) {
+              status.textContent = "No matching parcels in this view";
+              return;
+            }
+            for (const f of data.features) {
+              const color = CATEGORY_COLORS[f.category] || "#0071e3";
+              const tip = `<strong>${esc(f.address || "(No address)")}</strong><br>${esc(f.category)}${f.est_tax != null ? ` &middot; Est. ${fmtUSD2(f.est_tax)}` : ""}`;
+              const shape = f.rings
+                ? L.polygon(toLatLngs(f.rings), { color, weight: 1.5, fillOpacity: 0.22 })
+                : L.circleMarker([f.lat, f.lon], { radius: 4.5, color: "#ffffff", weight: 1, fillColor: color, fillOpacity: 0.88 });
+              shape.bindTooltip(tip);
+              shape.on("click", () => openSheet(f.property_id));
+              shape.addTo(this.layer);
+            }
+            status.textContent = `${data.features.length.toLocaleString()} parcel${data.features.length === 1 ? "" : "s"} in view${wantShapes ? " (local GIS outlines)" : " — zoom in for outlines"}`;
+            return;
+          }
+
           const countRes = await queryPaslc({
             where,
             geometry: bbox,
@@ -1541,20 +1664,68 @@
       document.getElementById("sheet-body").innerHTML = `<div class="empty-state">Fetching live record and GIS boundary…</div>`;
 
       try {
-        const res = await queryPaslc({
-          where: `PropertyID = ${Number(propertyId)}`,
-          outFields: "*",
-          returnGeometry: "true",
-          outSR: "4326"
-        });
-        const feat = (res.features || [])[0];
-        if (!feat) {
-          document.getElementById("sheet-body").innerHTML = `<div class="empty-state">Parcel record not found.</div>`;
-          return;
+        let a, rings, est, nonAdValoremLines = [], localDetail = null;
+        if (dataMode === "local") {
+          const res = await fetch("/api/property/" + encodeURIComponent(propertyId));
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const d = await res.json();
+          localDetail = d;
+          a = {
+            PropertyID: d.property_id,
+            ParcelID: d.parcel_id,
+            SiteAddress: (d.address || "") + (d.unit ? ` #${d.unit}` : ""),
+            SiteCity: d.jurisdiction,
+            SiteZIP: d.zip,
+            LandUseCodeDescription: d.land_use_desc,
+            _category: d.category,
+            Zoning: d.zoning,
+            ImprovedStatus: d.building_value > 0 ? "Improved" : "Vacant",
+            DistrictGroup: d.tax_district,
+            Owner1: d.owner, Owner2: d.owner2, Owner3: d.owner3,
+            _mailStatus: d.mail_status,
+            _mailingFull: d.mail_line1 ? [d.mail_line1, d.mail_line2, d.mail_city_state_zip].filter(Boolean).join(", ") : d.mailing_address,
+            YearBuilt: d.year_built,
+            BuildingCount: d.buildings,
+            Beds: d.bedrooms,
+            Baths: d.full_baths ? (d.full_baths + (d.half_baths ? 0.5 : 0)) : 0,
+            TotalArea: d.acres ? d.acres * 43560 : 0,
+            SubdivisionDescription: d.subdivision,
+            TotalAppraisedValue: d.just_value,
+            TotalAssessedValue: d.assessed_value,
+            TotalAppraisedLandValue: d.land_value,
+            TotalAppraisedBuildingValue: d.building_value,
+            TotalExemptionValue: d.exemption_value,
+            TotalTaxableValue: d.taxable_value,
+            SalePrice: d.last_sale_price,
+            SaleDate: d.last_sale_date,
+            YCoordinate: d.lat,
+            XCoordinate: d.lon,
+            LegalDescription: d.legal
+          };
+          rings = d.geometry && d.geometry.rings ? d.geometry.rings : null;
+          est = {
+            lines: (d.levies || []).map(l => ({ authority: l.authority, basis: l.basis, rate: l.rate, taxable: l.taxable, tax: l.tax })),
+            mills: (d.levies || []).reduce((s, l) => s + l.rate, 0),
+            total: d.est_tax
+          };
+          nonAdValoremLines = d.other_assessments || [];
+        } else {
+          const res = await queryPaslc({
+            where: `PropertyID = ${Number(propertyId)}`,
+            outFields: "*",
+            returnGeometry: "true",
+            outSR: "4326"
+          });
+          const feat = (res.features || [])[0];
+          if (!feat) {
+            document.getElementById("sheet-body").innerHTML = `<div class="empty-state">Parcel record not found.</div>`;
+            return;
+          }
+          a = feat.attributes;
+          rings = feat.geometry && feat.geometry.rings ? feat.geometry.rings : null;
+          est = estimateTax(a.DistrictGroup, a.TotalTaxableValue);
         }
-        const a = feat.attributes;
-        const rings = feat.geometry && feat.geometry.rings ? feat.geometry.rings : null;
-        const cat = categoryFromCode(a.LandUseCode);
+        const cat = a._category || categoryFromCode(a.LandUseCode);
         const city = a.SiteCity === "Saint Lucie County" ? "Unincorporated St. Lucie County" : (a.SiteCity || "");
         const lat = Number(a.YCoordinate);
         const lon = Number(a.XCoordinate);
@@ -1562,17 +1733,16 @@
         document.getElementById("sheet-title").textContent = (a.SiteAddress || "").trim() || "(No street address)";
         document.getElementById("sheet-subtitle").innerHTML = `${esc(city)} ${esc(a.SiteZIP || "")} &middot; <span class="mono">${esc(a.ParcelID)}</span>`;
 
-        const ms = mailStatus(a);
+        const ms = a._mailStatus || mailStatus(a);
         const mailBadge = ms === "same"
           ? `<span class="pill ok">Same as property</span>`
           : ms === "po_box" ? `<span class="pill warn">PO Box</span>`
           : ms === "different" ? `<span class="pill warn">Different address${a.MailState && a.MailState !== "FL" ? ` · ${esc(a.MailState)}` : ""}</span>`
           : `<span class="pill">Unknown</span>`;
 
-        const mailingFull = [a.MailAddress1, a.MailAddress2, [a.MailCity, a.MailState, a.MailZipCode].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+        const mailingFull = a._mailingFull || [a.MailAddress1, a.MailAddress2, [a.MailCity, a.MailState, a.MailZipCode].filter(Boolean).join(" ")].filter(Boolean).join(", ");
         const owners = [a.Owner1, a.Owner2, a.Owner3].filter(Boolean).join(" · ") || "—";
 
-        const est = estimateTax(a.DistrictGroup, a.TotalTaxableValue);
         const groupRows = (basis, label) => {
           const rows = est.lines.filter(l => l.basis === basis);
           if (!rows.length) return "";
@@ -1584,6 +1754,10 @@
               <td class="num">${fmtUSD2(l.tax)}</td>
             </tr>`).join("");
         };
+        const navRows = nonAdValoremLines.length
+          ? `<tr class="group-row"><td colspan="4">Non-Ad Valorem Assessments</td></tr>` +
+            nonAdValoremLines.map(o => `<tr><td colspan="3">${esc(o.description)}</td><td class="num">${fmtUSD2(o.amount)}</td></tr>`).join("")
+          : "";
 
         const lotSvg = rings ? buildPlatSvg(a, rings) : "";
 
@@ -1616,8 +1790,9 @@
                   ${groupRows("school", "School")}
                   ${groupRows("county", "County")}
                   ${groupRows("other", "City &amp; Districts")}
+                  ${navRows}
                   <tr class="total-row">
-                    <td colspan="2">Estimated 2026 Ad Valorem</td>
+                    <td colspan="2">Estimated 2026 ${nonAdValoremLines.length ? "Total Tax" : "Ad Valorem"}</td>
                     <td class="num mono">${est.mills.toFixed(4)}</td>
                     <td class="num">${fmtUSD2(est.total)}</td>
                   </tr>
@@ -1716,23 +1891,31 @@
 
           // Load neighboring outlines for context
           const nb = outline.getBounds().pad(1.4);
-          queryPaslc({
-            where: "1=1",
-            geometry: `${nb.getWest().toFixed(6)},${nb.getSouth().toFixed(6)},${nb.getEast().toFixed(6)},${nb.getNorth().toFixed(6)}`,
-            geometryType: "esriGeometryEnvelope",
-            inSR: "4326",
-            spatialRel: "esriSpatialRelIntersects",
-            outFields: "PropertyID,SiteAddress",
-            returnGeometry: "true",
-            outSR: "4326",
-            resultRecordCount: "80"
-          }).then(nbData => {
+          const nbBbox = `${nb.getWest().toFixed(6)},${nb.getSouth().toFixed(6)},${nb.getEast().toFixed(6)},${nb.getNorth().toFixed(6)}`;
+          const nbPromise = dataMode === "local"
+            ? fetch(`/api/map?shapes=1&bbox=${nbBbox}`).then(r => r.json()).then(d => (d.features || []).map(f => ({
+                id: f.property_id, address: f.address, rings: f.rings
+              })))
+            : queryPaslc({
+                where: "1=1",
+                geometry: nbBbox,
+                geometryType: "esriGeometryEnvelope",
+                inSR: "4326",
+                spatialRel: "esriSpatialRelIntersects",
+                outFields: "PropertyID,SiteAddress",
+                returnGeometry: "true",
+                outSR: "4326",
+                resultRecordCount: "80"
+              }).then(nbData => (nbData.features || []).map(nf => ({
+                id: nf.attributes.PropertyID, address: nf.attributes.SiteAddress, rings: nf.geometry?.rings
+              })));
+          nbPromise.then(neighbors => {
             if (!parcelMap) return;
-            for (const nf of (nbData.features || [])) {
-              if (nf.attributes.PropertyID === a.PropertyID || !nf.geometry?.rings) continue;
-              L.polygon(toLatLngs(nf.geometry.rings), { color: "#ffffff", weight: 1, opacity: 0.65, fillOpacity: 0 })
-                .bindTooltip(esc(nf.attributes.SiteAddress || "(No address)"))
-                .on("click", () => openSheet(nf.attributes.PropertyID))
+            for (const nf of neighbors) {
+              if (nf.id === a.PropertyID || !nf.rings) continue;
+              L.polygon(toLatLngs(nf.rings), { color: "#ffffff", weight: 1, opacity: 0.65, fillOpacity: 0 })
+                .bindTooltip(esc(nf.address || "(No address)"))
+                .on("click", () => openSheet(nf.id))
                 .addTo(parcelMap);
             }
             outline.bringToFront();
@@ -1857,11 +2040,27 @@
     });
     document.addEventListener("keydown", e => { if (e.key === "Escape") closeSheet(); });
 
-    // Initial load: fetch live county total count + first page of real parcels
-    queryPaslc({ where: "1=1", returnCountOnly: "true" })
-      .then(r => { if (r.count) document.getElementById("hero-count").textContent = r.count.toLocaleString(); })
-      .catch(() => {});
-    loadTable();
+    // Initial load: auto-detect local website/server.py backend; fall back to live PASLC GIS
+    (async function init() {
+      if (location.protocol !== "file:") {
+        try {
+          const probe = await fetch("/api/filters");
+          if (probe.ok) {
+            dataMode = "local";
+            document.getElementById("data-source-badge").textContent = "Local SQLite Backend";
+            const meta = await probe.json();
+            const total = (meta.categories || []).reduce((s, c) => s + (c.count || 0), 0);
+            if (total) document.getElementById("hero-count").textContent = total.toLocaleString();
+          }
+        } catch { /* fall back to live PASLC GIS */ }
+      }
+      if (dataMode === "paslc") {
+        queryPaslc({ where: "1=1", returnCountOnly: "true" })
+          .then(r => { if (r.count) document.getElementById("hero-count").textContent = r.count.toLocaleString(); })
+          .catch(() => {});
+      }
+      loadTable();
+    })();
   </script>
 </body>
 </html>
