@@ -122,10 +122,14 @@
 
     /* Editorial Hero */
     .hero {
-      background: var(--bg-alt);
-      padding: 84px 22px 68px;
+      position: relative;
+      background:
+        linear-gradient(180deg, rgba(0, 0, 0, 0.46) 0%, rgba(0, 0, 0, 0.34) 48%, rgba(0, 0, 0, 0.72) 100%),
+        url("hero-city-hall.jpg") center 46% / cover no-repeat;
+      background-color: #1d1d1f;
+      padding: 104px 22px 68px;
       text-align: center;
-      border-bottom: 1px solid var(--border);
+      color: #ffffff;
     }
     .hero-inner { max-width: 780px; margin: 0 auto; }
     .eyebrow {
@@ -135,13 +139,15 @@
       letter-spacing: -0.01em;
       margin: 0 0 10px;
     }
+    .hero .eyebrow { color: rgba(255, 255, 255, 0.86); }
     .hero h1 {
       margin: 0;
       font-size: clamp(36px, 5.5vw, 56px);
       line-height: 1.07;
       font-weight: 600;
       letter-spacing: -0.028em;
-      color: var(--text);
+      color: #ffffff;
+      text-shadow: 0 2px 18px rgba(0, 0, 0, 0.28);
     }
     .hero p.lead {
       margin: 18px auto 0;
@@ -150,7 +156,8 @@
       line-height: 1.38;
       font-weight: 400;
       letter-spacing: -0.012em;
-      color: var(--text-secondary);
+      color: rgba(255, 255, 255, 0.9);
+      text-shadow: 0 1px 12px rgba(0, 0, 0, 0.25);
     }
     .hero-actions {
       margin-top: 28px;
@@ -181,24 +188,24 @@
       align-items: center;
       justify-content: center;
       background: transparent;
-      color: var(--blue);
-      border: 1px solid var(--blue);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.82);
       border-radius: 980px;
       padding: 10px 21px;
       font-size: 15px;
       font-weight: 400;
       letter-spacing: -0.01em;
       cursor: pointer;
-      transition: background 0.15s ease, color 0.15s ease;
+      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
     }
-    .btn-secondary:hover { background: var(--blue); color: #ffffff; text-decoration: none; }
+    .btn-secondary:hover { background: #ffffff; color: #1d1d1f; border-color: #ffffff; text-decoration: none; }
 
     /* Key Figures Strip */
     .metrics-strip {
       max-width: var(--max-w);
-      margin: 52px auto 0;
-      padding-top: 32px;
-      border-top: 1px solid var(--border);
+      margin: 64px auto 0;
+      padding-top: 28px;
+      border-top: 1px solid rgba(255, 255, 255, 0.24);
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 20px;
@@ -210,13 +217,13 @@
       font-weight: 600;
       letter-spacing: -0.025em;
       font-variant-numeric: tabular-nums;
-      color: var(--text);
+      color: #ffffff;
     }
     .metric-item span {
       display: block;
       margin-top: 4px;
       font-size: 13px;
-      color: var(--text-secondary);
+      color: rgba(255, 255, 255, 0.82);
     }
 
     /* Main Browser Section */
