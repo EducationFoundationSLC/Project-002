@@ -1336,9 +1336,16 @@
 
     function buildWhere() {
       const clauses = [];
-      const q = document.getElementById("search").value.trim().toUpperCase().replace(/'/g, "''");
-      if (q) {
-        clauses.push(`(UPPER(SiteAddress) LIKE '%${q}%' OR UPPER(Owner1) LIKE '%${q}%' OR UPPER(Owner2) LIKE '%${q}%' OR UPPER(ParcelID) LIKE '%${q}%' OR UPPER(SubdivisionDescription) LIKE '%${q}%' OR SiteZIP LIKE '${q}%')`);
+      const rawQ = document.getElementById("search").value.trim();
+      if (rawQ) {
+        // Support multi-part searches like "2284 SW Cameo Blvd, Port St. Lucie"
+        const parts = rawQ.split(",").map(s => s.trim()).filter(Boolean);
+        for (const part of parts) {
+          const q = part.toUpperCase().replace(/'/g, "''");
+          const altCity = q.replace(/\bST\.?\s+LUCIE\b/g, "SAINT LUCIE");
+          const cityClause = altCity !== q ? ` OR UPPER(SiteCity) LIKE '%${altCity}%'` : "";
+          clauses.push(`(UPPER(SiteAddress) LIKE '%${q}%' OR UPPER(SiteCity) LIKE '%${q}%'${cityClause} OR UPPER(Owner1) LIKE '%${q}%' OR UPPER(Owner2) LIKE '%${q}%' OR UPPER(ParcelID) LIKE '%${q}%' OR UPPER(SubdivisionDescription) LIKE '%${q}%' OR SiteZIP LIKE '${q}%')`);
+        }
       }
       const cat = document.getElementById("f-category").value;
       if (cat === "Residential") clauses.push("LandUseCode < '1000'");
@@ -1560,39 +1567,74 @@
           .map(([k, c]) => `<span><i style="background:${c}"></i>${k}</span>`).join("");
       },
 
-      show() {
+      show(fitToQuery = false) {
         this.init();
-        setTimeout(() => {
+        setTimeout(async () => {
           this.map.invalidateSize();
           if (this.nearCircle) { this.nearCircle.remove(); this.nearCircle = null; }
           if (state.near) {
             this.nearCircle = L.circle([state.near.lat, state.near.lon], {
-              radius: state.near.radius * 1609.34, color: "#0071e3", weight: 2, fill: false, dashArray: "6 6"
+              radius: state.near.radius * 1609.34, color: "#0071e3", weight: 2, fill: false, dashArray: "6 6", interactive: false
             }).addTo(this.map);
-            this.map.fitBounds(this.nearCircle.getBounds());
-          } else {
+            this.map.fitBounds(this.nearCircle.getBounds(), { padding: [24, 24], maxZoom: 17 });
             this.refresh();
+            return;
           }
+          if (fitToQuery) {
+            const fitted = await this.fitToSearchResults();
+            if (fitted) return;
+          }
+          this.refresh();
         }, 50);
+      },
+
+      async fitToSearchResults() {
+        const where = buildWhere();
+        if (where === "1=1") return false;
+        try {
+          if (dataMode === "local") {
+            const p = buildLocalParams();
+            p.set("size", "1");
+            const res = await fetch("/api/properties?" + p.toString());
+            const d = await res.json();
+            const first = (d.rows || [])[0];
+            if (first && first.lat && first.lon) {
+              this.map.setView([first.lat, first.lon], 17);
+              return true;
+            }
+            return false;
+          }
+          const extRes = await queryPaslc({ where, returnExtentOnly: "true", outSR: "4326" });
+          const ex = extRes.extent;
+          if (ex && isFinite(ex.xmin) && isFinite(ex.ymin) && isFinite(ex.xmax) && isFinite(ex.ymax) && ex.xmin !== ex.xmax) {
+            this.map.fitBounds([[ex.ymin, ex.xmin], [ex.ymax, ex.xmax]], { padding: [36, 36], maxZoom: 18 });
+            return true;
+          }
+        } catch { /* ignore */ }
+        return false;
       },
 
       async refresh() {
         if (!this.map || document.getElementById("map-view").hidden) return;
         const b = this.map.getBounds();
         const zoom = this.map.getZoom();
-        const wantShapes = zoom >= SHAPES_MIN_ZOOM;
         const bbox = `${b.getWest().toFixed(6)},${b.getSouth().toFixed(6)},${b.getEast().toFixed(6)},${b.getNorth().toFixed(6)}`;
         const where = buildWhere();
+        const nearBbox = state.near ? nearSpatialParams().geometry : null;
+        // When Near me is active, query inside the Near me bounds (intersected with viewport if zoomed in)
+        const queryBbox = nearBbox || bbox;
 
         this.abort?.abort();
         this.abort = new AbortController();
         const status = document.getElementById("map-status");
+        const statsEl = document.getElementById("results-stats");
         status.textContent = "Loading parcels…";
 
         try {
           if (dataMode === "local") {
+            const wantShapes = zoom >= SHAPES_MIN_ZOOM || !!state.near;
             const p = buildLocalParams();
-            p.set("bbox", bbox);
+            p.set("bbox", queryBbox);
             if (wantShapes) p.set("shapes", "1");
             const res = await fetch("/api/map?" + p.toString(), { signal: this.abort.signal });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -1600,10 +1642,12 @@
             this.layer.clearLayers();
             if (data.truncated) {
               status.textContent = `${data.total.toLocaleString()} parcels in view — zoom in or filter to display them`;
+              statsEl.innerHTML = `<span><strong>${data.total.toLocaleString()}</strong> parcels in map view</span>`;
               return;
             }
             if (!data.features.length) {
               status.textContent = "No matching parcels in this view";
+              statsEl.innerHTML = `<span><strong>0</strong> parcels in map view</span>`;
               return;
             }
             for (const f of data.features) {
@@ -1611,18 +1655,19 @@
               const tip = `<strong>${esc(f.address || "(No address)")}</strong><br>${esc(f.category)}${f.est_tax != null ? ` &middot; Est. ${fmtUSD2(f.est_tax)}` : ""}`;
               const shape = f.rings
                 ? L.polygon(toLatLngs(f.rings), { color, weight: 1.5, fillOpacity: 0.22 })
-                : L.circleMarker([f.lat, f.lon], { radius: 4.5, color: "#ffffff", weight: 1, fillColor: color, fillOpacity: 0.88 });
+                : L.circleMarker([f.lat, f.lon], { radius: 5, color: "#ffffff", weight: 1, fillColor: color, fillOpacity: 0.9 });
               shape.bindTooltip(tip);
               shape.on("click", () => openSheet(f.property_id));
               shape.addTo(this.layer);
             }
             status.textContent = `${data.features.length.toLocaleString()} parcel${data.features.length === 1 ? "" : "s"} in view${wantShapes ? " (local GIS outlines)" : " — zoom in for outlines"}`;
+            statsEl.innerHTML = `<span><strong>${data.features.length.toLocaleString()}</strong> parcel${data.features.length === 1 ? "" : "s"} shown on map</span><span>Click any parcel for details</span>`;
             return;
           }
 
           const countRes = await queryPaslc({
             where,
-            geometry: bbox,
+            geometry: queryBbox,
             geometryType: "esriGeometryEnvelope",
             inSR: "4326",
             spatialRel: "esriSpatialRelIntersects",
@@ -1634,16 +1679,20 @@
 
           if (total === 0) {
             status.textContent = "No matching parcels in this view";
+            statsEl.innerHTML = `<span><strong>0</strong> parcels in map view</span>`;
             return;
           }
           if (total > MAP_MAX_FEATURES) {
             status.textContent = `${total.toLocaleString()} parcels in view — zoom in or filter to display them`;
+            statsEl.innerHTML = `<span><strong>${total.toLocaleString()}</strong> parcels in map view (zoom in to inspect)</span>`;
             return;
           }
 
+          // Draw full GIS polygon outlines when zoomed in OR whenever the result set is small (<= 450)
+          const wantShapes = zoom >= SHAPES_MIN_ZOOM || total <= 450;
           const data = await queryPaslc({
             where,
-            geometry: bbox,
+            geometry: queryBbox,
             geometryType: "esriGeometryEnvelope",
             inSR: "4326",
             spatialRel: "esriSpatialRelIntersects",
@@ -1666,7 +1715,7 @@
               shape = L.polygon(toLatLngs(f.geometry.rings), { color, weight: 1.5, fillOpacity: 0.22 });
             } else if (a.YCoordinate && a.XCoordinate) {
               shape = L.circleMarker([Number(a.YCoordinate), Number(a.XCoordinate)], {
-                radius: 4.5, color: "#ffffff", weight: 1, fillColor: color, fillOpacity: 0.88
+                radius: 5, color: "#ffffff", weight: 1, fillColor: color, fillOpacity: 0.9
               });
             }
             if (shape) {
@@ -1676,6 +1725,7 @@
             }
           }
           status.textContent = `${feats.length.toLocaleString()} parcel${feats.length === 1 ? "" : "s"} in view${wantShapes ? " (GIS outlines)" : " — zoom in for outlines"}`;
+          statsEl.innerHTML = `<span><strong>${feats.length.toLocaleString()}</strong> parcel${feats.length === 1 ? "" : "s"} shown on map</span><span>Click any parcel for details</span>`;
         } catch (err) {
           if (err.name !== "AbortError") status.textContent = `Map query error (${err.message})`;
         }
@@ -2067,12 +2117,12 @@
       document.getElementById("near-radius").hidden = true;
     }
 
-    function refreshView() {
+    function refreshView(fitToQuery = false) {
       const isMap = state.view === "map";
       document.getElementById("table-view").hidden = isMap;
       document.getElementById("pager").hidden = isMap;
       document.getElementById("map-view").hidden = !isMap;
-      if (isMap) ResultsMap.show();
+      if (isMap) ResultsMap.show(fitToQuery);
       else loadTable();
     }
 
@@ -2082,18 +2132,18 @@
         document.querySelectorAll(".segmented button").forEach(b => b.setAttribute("aria-selected", "false"));
         btn.setAttribute("aria-selected", "true");
         state.view = btn.dataset.view;
-        refreshView();
+        refreshView(state.view === "map");
       });
     });
 
     let searchTimer = null;
     document.getElementById("search").addEventListener("input", () => {
       clearTimeout(searchTimer);
-      searchTimer = setTimeout(() => { state.page = 1; refreshView(); }, 320);
+      searchTimer = setTimeout(() => { state.page = 1; refreshView(true); }, 320);
     });
 
     ["f-category", "f-jurisdiction", "f-exempt", "f-improved", "f-state"].forEach(id => {
-      document.getElementById(id).addEventListener("change", () => { state.page = 1; refreshView(); });
+      document.getElementById(id).addEventListener("change", () => { state.page = 1; refreshView(true); });
     });
 
     document.getElementById("near-radius").addEventListener("change", () => {
