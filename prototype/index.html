@@ -1554,21 +1554,27 @@
     const toLatLngs = rings => rings.map(r => r.map(([lon, lat]) => [lat, lon]));
 
     const ResultsMap = {
-      map: null, layer: null, nearCircle: null, abort: null,
+      map: null, layer: null, nearCircle: null, abort: null, renderer: null,
+      moveTimer: null, lastBounds: null, lastWhere: null, lastShapes: null,
 
       init() {
         if (this.map) return;
         const layers = baseLayers();
-        this.map = L.map("map", { preferCanvas: true, layers: [layers.Streets] }).setView([27.2730, -80.3582], 16);
+        this.renderer = L.canvas({ padding: 0.5 });
+        this.map = L.map("map", { preferCanvas: true, renderer: this.renderer, layers: [layers.Streets] }).setView([27.2730, -80.3582], 16);
         L.control.layers(layers, null, { position: "topright" }).addTo(this.map);
         this.layer = L.layerGroup().addTo(this.map);
-        this.map.on("moveend", () => this.refresh());
+        this.map.on("moveend", () => {
+          clearTimeout(this.moveTimer);
+          this.moveTimer = setTimeout(() => this.refresh(false), 180);
+        });
         document.getElementById("map-legend").innerHTML = Object.entries(CATEGORY_COLORS)
           .map(([k, c]) => `<span><i style="background:${c}"></i>${k}</span>`).join("");
       },
 
       show(fitToQuery = false) {
         this.init();
+        this.lastBounds = null; // force fresh query when filters/view change
         setTimeout(async () => {
           this.map.invalidateSize();
           if (this.nearCircle) { this.nearCircle.remove(); this.nearCircle = null; }
@@ -1577,14 +1583,14 @@
               radius: state.near.radius * 1609.34, color: "#0071e3", weight: 2, fill: false, dashArray: "6 6", interactive: false
             }).addTo(this.map);
             this.map.fitBounds(this.nearCircle.getBounds(), { padding: [24, 24], maxZoom: 17 });
-            this.refresh();
+            this.refresh(true);
             return;
           }
           if (fitToQuery) {
             const fitted = await this.fitToSearchResults();
             if (fitted) return;
           }
-          this.refresh();
+          this.refresh(true);
         }, 50);
       },
 
@@ -1614,54 +1620,72 @@
         return false;
       },
 
-      async refresh() {
+      async refresh(force = false) {
         if (!this.map || document.getElementById("map-view").hidden) return;
-        const b = this.map.getBounds();
+        const viewBounds = this.map.getBounds();
         const zoom = this.map.getZoom();
-        const bbox = `${b.getWest().toFixed(6)},${b.getSouth().toFixed(6)},${b.getEast().toFixed(6)},${b.getNorth().toFixed(6)}`;
         const where = buildWhere();
+        const wantShapesHint = zoom >= SHAPES_MIN_ZOOM || !!state.near;
+
+        // Skip redundant re-fetch if user only panned within our already-loaded overscan area
+        if (!force && !state.near && this.lastBounds && this.lastWhere === where &&
+            this.lastShapes === wantShapesHint && this.lastBounds.contains(viewBounds)) {
+          return;
+        }
+
+        // Overscan viewport by 35% so small pans never clip or need an immediate reload
+        const fetchBounds = viewBounds.pad(0.35);
+        const bbox = `${fetchBounds.getWest().toFixed(6)},${fetchBounds.getSouth().toFixed(6)},${fetchBounds.getEast().toFixed(6)},${fetchBounds.getNorth().toFixed(6)}`;
         const nearBbox = state.near ? nearSpatialParams().geometry : null;
-        // When Near me is active, query inside the Near me bounds (intersected with viewport if zoomed in)
         const queryBbox = nearBbox || bbox;
 
         this.abort?.abort();
         this.abort = new AbortController();
         const status = document.getElementById("map-status");
         const statsEl = document.getElementById("results-stats");
-        status.textContent = "Loading parcels…";
+        status.textContent = "Updating parcels…";
 
         try {
           if (dataMode === "local") {
-            const wantShapes = zoom >= SHAPES_MIN_ZOOM || !!state.near;
             const p = buildLocalParams();
             p.set("bbox", queryBbox);
-            if (wantShapes) p.set("shapes", "1");
+            if (wantShapesHint) p.set("shapes", "1");
             const res = await fetch("/api/map?" + p.toString(), { signal: this.abort.signal });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
-            this.layer.clearLayers();
+
             if (data.truncated) {
+              this.layer.clearLayers();
+              this.lastBounds = null;
               status.textContent = `${data.total.toLocaleString()} parcels in view — zoom in or filter to display them`;
               statsEl.innerHTML = `<span><strong>${data.total.toLocaleString()}</strong> parcels in map view</span>`;
               return;
             }
-            if (!data.features.length) {
-              status.textContent = "No matching parcels in this view";
-              statsEl.innerHTML = `<span><strong>0</strong> parcels in map view</span>`;
-              return;
-            }
-            for (const f of data.features) {
+            const nextShapes = [];
+            for (const f of (data.features || [])) {
               const color = CATEGORY_COLORS[f.category] || "#0071e3";
               const tip = `<strong>${esc(f.address || "(No address)")}</strong><br>${esc(f.category)}${f.est_tax != null ? ` &middot; Est. ${fmtUSD2(f.est_tax)}` : ""}`;
               const shape = f.rings
-                ? L.polygon(toLatLngs(f.rings), { color, weight: 1.5, fillOpacity: 0.22 })
-                : L.circleMarker([f.lat, f.lon], { radius: 5, color: "#ffffff", weight: 1, fillColor: color, fillOpacity: 0.9 });
+                ? L.polygon(toLatLngs(f.rings), { renderer: this.renderer, color, weight: 1.5, fillOpacity: 0.22 })
+                : L.circleMarker([f.lat, f.lon], { renderer: this.renderer, radius: 5, color: "#ffffff", weight: 1, fillColor: color, fillOpacity: 0.9 });
               shape.bindTooltip(tip);
               shape.on("click", () => openSheet(f.property_id));
-              shape.addTo(this.layer);
+              nextShapes.push(shape);
             }
-            status.textContent = `${data.features.length.toLocaleString()} parcel${data.features.length === 1 ? "" : "s"} in view${wantShapes ? " (local GIS outlines)" : " — zoom in for outlines"}`;
-            statsEl.innerHTML = `<span><strong>${data.features.length.toLocaleString()}</strong> parcel${data.features.length === 1 ? "" : "s"} shown on map</span><span>Click any parcel for details</span>`;
+            // Atomic swap (no blank flash while loading)
+            this.layer.clearLayers();
+            nextShapes.forEach(s => s.addTo(this.layer));
+            this.lastBounds = fetchBounds;
+            this.lastWhere = where;
+            this.lastShapes = wantShapesHint;
+
+            if (!nextShapes.length) {
+              status.textContent = "No matching parcels in this view";
+              statsEl.innerHTML = `<span><strong>0</strong> parcels in map view</span>`;
+            } else {
+              status.textContent = `${nextShapes.length.toLocaleString()} parcel${nextShapes.length === 1 ? "" : "s"} loaded${wantShapesHint ? " (local GIS outlines)" : " — zoom in for outlines"}`;
+              statsEl.innerHTML = `<span><strong>${nextShapes.length.toLocaleString()}</strong> parcel${nextShapes.length === 1 ? "" : "s"} loaded on map</span><span>Click any parcel for details</span>`;
+            }
             return;
           }
 
@@ -1675,20 +1699,23 @@
           }, this.abort.signal);
 
           const total = countRes.count || 0;
-          this.layer.clearLayers();
-
           if (total === 0) {
+            this.layer.clearLayers();
+            this.lastBounds = fetchBounds;
+            this.lastWhere = where;
+            this.lastShapes = wantShapesHint;
             status.textContent = "No matching parcels in this view";
             statsEl.innerHTML = `<span><strong>0</strong> parcels in map view</span>`;
             return;
           }
           if (total > MAP_MAX_FEATURES) {
+            this.layer.clearLayers();
+            this.lastBounds = null;
             status.textContent = `${total.toLocaleString()} parcels in view — zoom in or filter to display them`;
             statsEl.innerHTML = `<span><strong>${total.toLocaleString()}</strong> parcels in map view (zoom in to inspect)</span>`;
             return;
           }
 
-          // Draw full GIS polygon outlines when zoomed in OR whenever the result set is small (<= 450)
           const wantShapes = zoom >= SHAPES_MIN_ZOOM || total <= 450;
           const data = await queryPaslc({
             where,
@@ -1703,6 +1730,7 @@
           }, this.abort.signal);
 
           const feats = data.features || [];
+          const nextShapes = [];
           for (const f of feats) {
             const a = f.attributes;
             const cat = categoryFromCode(a.LandUseCode);
@@ -1712,20 +1740,27 @@
 
             let shape = null;
             if (wantShapes && f.geometry && f.geometry.rings) {
-              shape = L.polygon(toLatLngs(f.geometry.rings), { color, weight: 1.5, fillOpacity: 0.22 });
+              shape = L.polygon(toLatLngs(f.geometry.rings), { renderer: this.renderer, color, weight: 1.5, fillOpacity: 0.22 });
             } else if (a.YCoordinate && a.XCoordinate) {
               shape = L.circleMarker([Number(a.YCoordinate), Number(a.XCoordinate)], {
-                radius: 5, color: "#ffffff", weight: 1, fillColor: color, fillOpacity: 0.9
+                renderer: this.renderer, radius: 5, color: "#ffffff", weight: 1, fillColor: color, fillOpacity: 0.9
               });
             }
             if (shape) {
               shape.bindTooltip(tip);
               shape.on("click", () => openSheet(a.PropertyID));
-              shape.addTo(this.layer);
+              nextShapes.push(shape);
             }
           }
-          status.textContent = `${feats.length.toLocaleString()} parcel${feats.length === 1 ? "" : "s"} in view${wantShapes ? " (GIS outlines)" : " — zoom in for outlines"}`;
-          statsEl.innerHTML = `<span><strong>${feats.length.toLocaleString()}</strong> parcel${feats.length === 1 ? "" : "s"} shown on map</span><span>Click any parcel for details</span>`;
+          // Atomic swap so existing parcels stay visible until new ones are ready
+          this.layer.clearLayers();
+          nextShapes.forEach(s => s.addTo(this.layer));
+          this.lastBounds = fetchBounds;
+          this.lastWhere = where;
+          this.lastShapes = wantShapesHint;
+
+          status.textContent = `${feats.length.toLocaleString()} parcel${feats.length === 1 ? "" : "s"} loaded${wantShapes ? " (GIS outlines)" : " — zoom in for outlines"}`;
+          statsEl.innerHTML = `<span><strong>${feats.length.toLocaleString()}</strong> parcel${feats.length === 1 ? "" : "s"} loaded on map</span><span>Click any parcel for details</span>`;
         } catch (err) {
           if (err.name !== "AbortError") status.textContent = `Map query error (${err.message})`;
         }
