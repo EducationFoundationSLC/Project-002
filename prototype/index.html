@@ -1,0 +1,1640 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>St. Lucie County Property Browser — Prototype</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <style>
+    :root {
+      --bg: #ffffff;
+      --bg-alt: #f5f5f7;
+      --bg-dark: #000000;
+      --card-dark: #1d1d1f;
+      --text: #1d1d1f;
+      --text-secondary: #6e6e73;
+      --text-tertiary: #86868b;
+      --border: rgba(0, 0, 0, 0.08);
+      --border-strong: rgba(0, 0, 0, 0.16);
+      --blue: #0071e3;
+      --blue-hover: #0077ed;
+      --link: #0066cc;
+      --nav-bg: rgba(251, 251, 253, 0.8);
+      --warn-bg: #fff6e5;
+      --warn-text: #8a5300;
+      --ok-bg: #eef6ee;
+      --ok-text: #1e6b34;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 18px;
+      --max-w: 1120px;
+      --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+    body {
+      margin: 0;
+      font-family: var(--font);
+      font-size: 15px;
+      line-height: 1.47;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    a { color: var(--link); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    button, input, select { font-family: inherit; font-size: inherit; color: inherit; }
+
+    /* Global Navigation (Apple 44px translucent bar) */
+    .global-nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      height: 44px;
+      background: var(--nav-bg);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner {
+      max-width: var(--max-w);
+      height: 100%;
+      margin: 0 auto;
+      padding: 0 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    .brand:hover { text-decoration: none; }
+    .brand-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text);
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .nav-links a {
+      font-size: 12px;
+      color: rgba(0, 0, 0, 0.8);
+      letter-spacing: -0.01em;
+      transition: color 0.15s ease;
+    }
+    .nav-links a:hover { color: #000000; text-decoration: none; }
+    .nav-badge {
+      font-size: 11px;
+      color: var(--text-secondary);
+      border: 1px solid var(--border-strong);
+      border-radius: 980px;
+      padding: 2px 9px;
+      white-space: nowrap;
+    }
+
+    /* Editorial Hero */
+    .hero {
+      background: var(--bg-alt);
+      padding: 84px 22px 68px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .hero-inner { max-width: 780px; margin: 0 auto; }
+    .eyebrow {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      letter-spacing: -0.01em;
+      margin: 0 0 10px;
+    }
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(36px, 5.5vw, 56px);
+      line-height: 1.07;
+      font-weight: 600;
+      letter-spacing: -0.028em;
+      color: var(--text);
+    }
+    .hero p.lead {
+      margin: 18px auto 0;
+      max-width: 580px;
+      font-size: clamp(17px, 2vw, 21px);
+      line-height: 1.38;
+      font-weight: 400;
+      letter-spacing: -0.012em;
+      color: var(--text-secondary);
+    }
+    .hero-actions {
+      margin-top: 28px;
+      display: inline-flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--blue);
+      color: #ffffff;
+      border: 0;
+      border-radius: 980px;
+      padding: 11px 22px;
+      font-size: 15px;
+      font-weight: 400;
+      letter-spacing: -0.01em;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .btn-primary:hover { background: var(--blue-hover); text-decoration: none; }
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      color: var(--blue);
+      border: 1px solid var(--blue);
+      border-radius: 980px;
+      padding: 10px 21px;
+      font-size: 15px;
+      font-weight: 400;
+      letter-spacing: -0.01em;
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    .btn-secondary:hover { background: var(--blue); color: #ffffff; text-decoration: none; }
+
+    /* Key Figures Strip */
+    .metrics-strip {
+      max-width: var(--max-w);
+      margin: 52px auto 0;
+      padding-top: 32px;
+      border-top: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      text-align: left;
+    }
+    .metric-item strong {
+      display: block;
+      font-size: 28px;
+      font-weight: 600;
+      letter-spacing: -0.025em;
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
+    }
+    .metric-item span {
+      display: block;
+      margin-top: 4px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    /* Main Browser Section */
+    .section {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      padding: 64px 22px;
+    }
+    .section-head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+    .section-head h2 {
+      margin: 0;
+      font-size: clamp(26px, 3.2vw, 34px);
+      font-weight: 600;
+      letter-spacing: -0.022em;
+      line-height: 1.12;
+    }
+    .section-head p {
+      margin: 6px 0 0;
+      color: var(--text-secondary);
+      font-size: 15px;
+    }
+
+    /* Segmented Control (Apple style) */
+    .segmented {
+      display: inline-flex;
+      background: var(--bg-alt);
+      padding: 3px;
+      border-radius: 980px;
+      border: 1px solid var(--border);
+    }
+    .segmented button {
+      border: 0;
+      background: transparent;
+      padding: 6px 16px;
+      border-radius: 980px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .segmented button[aria-selected="true"] {
+      background: #ffffff;
+      color: var(--text);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+
+    /* Filter Bar */
+    .controls-card {
+      background: var(--bg-alt);
+      border-radius: var(--radius-lg);
+      padding: 18px;
+      margin-bottom: 20px;
+    }
+    .search-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .search-wrap {
+      position: relative;
+      flex: 1 1 280px;
+    }
+    .search-wrap svg {
+      position: absolute;
+      left: 13px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 15px;
+      height: 15px;
+      color: var(--text-tertiary);
+      pointer-events: none;
+    }
+    .search-input {
+      width: 100%;
+      padding: 10px 14px 10px 36px;
+      border: 1px solid var(--border-strong);
+      border-radius: 10px;
+      background: #ffffff;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .search-input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.15);
+    }
+    .btn-subtle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 14px;
+      border: 1px solid var(--border-strong);
+      border-radius: 10px;
+      background: #ffffff;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+    .btn-subtle:hover { border-color: rgba(0, 0, 0, 0.3); }
+    .btn-subtle.active {
+      background: var(--text);
+      color: #ffffff;
+      border-color: var(--text);
+    }
+
+    .filters-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .filter-field label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-secondary);
+      margin-bottom: 5px;
+    }
+    .filter-field select {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      background: #ffffff;
+      font-size: 13px;
+      color: var(--text);
+      cursor: pointer;
+    }
+    .filter-field select:focus {
+      outline: none;
+      border-color: var(--blue);
+    }
+
+    /* Live Results Summary */
+    .results-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 6px 2px 14px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    .results-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      font-variant-numeric: tabular-nums;
+    }
+    .results-stats strong { color: var(--text); font-weight: 600; }
+    .reset-link {
+      border: 0;
+      background: none;
+      color: var(--link);
+      font-size: 13px;
+      cursor: pointer;
+      padding: 0;
+    }
+    .reset-link:hover { text-decoration: underline; }
+
+    /* Table */
+    .table-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      background: #ffffff;
+    }
+    .table-scroll { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+    }
+    thead th {
+      text-align: left;
+      padding: 12px 14px;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      background: var(--bg-alt);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+    }
+    thead th:hover { color: var(--text); }
+    thead th.sorted { color: var(--text); }
+    thead th.sorted::after { content: " ↓"; font-size: 11px; }
+    thead th.sorted.asc::after { content: " ↑"; }
+    tbody td {
+      padding: 13px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr { cursor: pointer; transition: background 0.1s ease; }
+    tbody tr:hover { background: #fafafa; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .addr-main { font-weight: 500; color: var(--text); }
+    .addr-sub { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+    .owner-cell { max-width: 210px; overflow: hidden; text-overflow: ellipsis; }
+    .tax-val { font-weight: 600; color: var(--text); }
+
+    .pill {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 980px;
+      background: var(--bg-alt);
+      color: var(--text-secondary);
+      margin-right: 4px;
+    }
+    .pill.ok { background: var(--ok-bg); color: var(--ok-text); }
+    .pill.warn { background: var(--warn-bg); color: var(--warn-text); }
+
+    .empty-state {
+      padding: 56px 20px;
+      text-align: center;
+      color: var(--text-secondary);
+    }
+
+    /* Map View */
+    .map-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      background: var(--bg-alt);
+    }
+    #map { height: 500px; width: 100%; }
+    .map-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 12px 16px;
+      background: #ffffff;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    .legend { display: flex; flex-wrap: wrap; gap: 14px; }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .legend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+
+    /* Dark Editorial Section (Apple.com contrast band) */
+    .dark-band {
+      background: var(--bg-dark);
+      color: #f5f5f7;
+      padding: 88px 22px;
+    }
+    .dark-inner { max-width: var(--max-w); margin: 0 auto; }
+    .dark-band .eyebrow { color: #86868b; }
+    .dark-band h2 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 44px);
+      font-weight: 600;
+      letter-spacing: -0.025em;
+      line-height: 1.09;
+      max-width: 680px;
+    }
+    .dark-band .sub {
+      margin: 14px 0 42px;
+      font-size: 17px;
+      color: #a1a1a6;
+      max-width: 620px;
+    }
+    .bento {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .bento-card {
+      background: var(--card-dark);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 220px;
+    }
+    .bento-card .kicker {
+      font-size: 12px;
+      font-weight: 600;
+      color: #86868b;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 10px;
+    }
+    .bento-card h3 {
+      margin: 0 0 10px;
+      font-size: 21px;
+      font-weight: 600;
+      letter-spacing: -0.018em;
+      color: #f5f5f7;
+    }
+    .bento-card p {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #a1a1a6;
+    }
+    .bento-card.wide { grid-column: span 2; }
+    .millage-example {
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      gap: 28px;
+      flex-wrap: wrap;
+      font-variant-numeric: tabular-nums;
+    }
+    .millage-example div span { display: block; font-size: 12px; color: #86868b; }
+    .millage-example div strong { font-size: 18px; color: #f5f5f7; font-weight: 600; }
+
+    /* Slide-over Property Sheet */
+    .sheet-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: rgba(0, 0, 0, 0.36);
+      display: flex;
+      justify-content: flex-end;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .sheet-backdrop.open { opacity: 1; pointer-events: auto; }
+    .sheet {
+      width: min(560px, 100%);
+      height: 100%;
+      background: #ffffff;
+      overflow-y: auto;
+      padding: 24px 28px 48px;
+      transform: translateX(24px);
+      transition: transform 0.22s ease;
+      box-shadow: -8px 0 32px rgba(0, 0, 0, 0.14);
+    }
+    .sheet-backdrop.open .sheet { transform: translateX(0); }
+    .sheet-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sheet-top h3 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+    .sheet-top p { margin: 4px 0 0; font-size: 13px; color: var(--text-secondary); }
+    .sheet-close {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      border: 0;
+      background: var(--bg-alt);
+      color: var(--text-secondary);
+      font-size: 18px;
+      line-height: 1;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .sheet-close:hover { background: #e8e8ed; color: var(--text); }
+
+    .sheet-section { margin-top: 24px; }
+    .sheet-section h4 {
+      margin: 0 0 12px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+    }
+    .kv-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px 18px;
+    }
+    .kv-item span { display: block; font-size: 12px; color: var(--text-secondary); }
+    .kv-item strong { display: block; font-size: 14px; font-weight: 500; margin-top: 2px; }
+
+    .trim-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .trim-table th, .trim-table td {
+      padding: 7px 6px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+    }
+    .trim-table th { font-size: 11px; color: var(--text-secondary); font-weight: 600; background: transparent; cursor: default; }
+    .trim-table tr.total-row td {
+      border-top: 1.5px solid var(--text);
+      border-bottom: 0;
+      font-weight: 600;
+      padding-top: 10px;
+    }
+
+    .lot-box {
+      background: var(--bg-alt);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      text-align: center;
+    }
+    .lot-box svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+    .lot-actions {
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    /* Footer */
+    footer {
+      background: var(--bg-alt);
+      border-top: 1px solid var(--border);
+      padding: 36px 22px 48px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    .footer-inner {
+      max-width: var(--max-w);
+      margin: 0 auto;
+    }
+    .footer-notes {
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      line-height: 1.6;
+    }
+    .footer-bottom {
+      padding-top: 18px;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .metrics-strip { grid-template-columns: repeat(2, 1fr); }
+      .filters-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .bento { grid-template-columns: 1fr; }
+      .bento-card.wide { grid-column: auto; }
+    }
+    @media (max-width: 600px) {
+      .nav-links { display: none; }
+      .hero { padding: 56px 18px 48px; }
+      .filters-grid { grid-template-columns: 1fr; }
+      .kv-grid { grid-template-columns: 1fr; }
+      .sheet { padding: 20px 18px 40px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Global Navigation -->
+  <nav class="global-nav" aria-label="Primary">
+    <div class="nav-inner">
+      <a href="#top" class="brand">
+        <span class="brand-dot" aria-hidden="true"></span>
+        St. Lucie Property
+      </a>
+      <ul class="nav-links">
+        <li><a href="#top">Overview</a></li>
+        <li><a href="#browse">Parcels</a></li>
+        <li><a href="#tax">2026 TRIM Rates</a></li>
+      </ul>
+      <span class="nav-badge">Prototype Draft</span>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <header id="top" class="hero">
+    <div class="hero-inner">
+      <p class="eyebrow">Saint Lucie County, Florida &middot; Public CAMA &amp; GIS Records</p>
+      <h1>Every parcel. Clearly structured.</h1>
+      <p class="lead">
+        Filter properties across Port St. Lucie, Fort Pierce, and St. Lucie Village.
+        Inspect TRIM-accurate 2026 tax estimates, exemptions, mailing addresses, and parcel geometry.
+      </p>
+      <div class="hero-actions">
+        <a href="#browse" class="btn-primary">Browse Parcels</a>
+        <a href="#tax" class="btn-secondary">How Taxes Are Calculated</a>
+      </div>
+
+      <div class="metrics-strip" aria-label="Dataset summary">
+        <div class="metric-item">
+          <strong id="hero-count">18</strong>
+          <span>Sample parcels loaded (PASLC schema)</span>
+        </div>
+        <div class="metric-item">
+          <strong id="hero-median">$374,500</strong>
+          <span>Median just (market) value</span>
+        </div>
+        <div class="metric-item">
+          <strong>2026</strong>
+          <span>Final millage rates &amp; TRIM bases</span>
+        </div>
+        <div class="metric-item">
+          <strong>4</strong>
+          <span>Jurisdictions across St. Lucie County</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Interactive Property Browser -->
+  <main id="browse" class="section">
+    <div class="section-head">
+      <div>
+        <h2>Property Browser</h2>
+        <p>Click any parcel to inspect its full TRIM tax breakdown, exemptions, and lot drawing.</p>
+      </div>
+      <div class="segmented" role="tablist" aria-label="Result view">
+        <button role="tab" data-view="tax" aria-selected="true">Taxes</button>
+        <button role="tab" data-view="property" aria-selected="false">Property</button>
+        <button role="tab" data-view="map" aria-selected="false">Map</button>
+      </div>
+    </div>
+
+    <!-- Search & Filters -->
+    <section class="controls-card" aria-label="Search and filters">
+      <div class="search-row">
+        <div class="search-wrap">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <circle cx="9" cy="9" r="6"></circle>
+            <path d="M13.5 13.5L17.5 17.5" stroke-linecap="round"></path>
+          </svg>
+          <input id="search" class="search-input" type="search" placeholder="Search address, owner, parcel ID, or subdivision">
+        </div>
+        <button id="near-btn" class="btn-subtle" type="button" title="Filter properties within 5 miles of Port St. Lucie City Hall (or your location)">
+          Near me (5 mi)
+        </button>
+      </div>
+
+      <div class="filters-grid">
+        <div class="filter-field">
+          <label for="f-category">Property Type</label>
+          <select id="f-category">
+            <option value="">All types</option>
+            <option value="Residential">Residential</option>
+            <option value="Commercial">Commercial</option>
+            <option value="Vacant">Vacant Land</option>
+            <option value="Agricultural">Agricultural</option>
+            <option value="Institutional">Institutional</option>
+          </select>
+        </div>
+
+        <div class="filter-field">
+          <label for="f-jurisdiction">Jurisdiction</label>
+          <select id="f-jurisdiction">
+            <option value="">All jurisdictions</option>
+            <option value="Port St. Lucie">Port St. Lucie</option>
+            <option value="Fort Pierce">Fort Pierce</option>
+            <option value="St. Lucie Village">St. Lucie Village</option>
+            <option value="Unincorporated">Unincorporated County</option>
+          </select>
+        </div>
+
+        <div class="filter-field">
+          <label for="f-exemption">Exemption</label>
+          <select id="f-exemption">
+            <option value="">Any exemption</option>
+            <option value="Homestead">Homestead</option>
+            <option value="Senior">Senior (65+)</option>
+            <option value="Disabled Veteran">Disabled Veteran</option>
+            <option value="Widow">Widow / Widower</option>
+            <option value="Religious">Religious / Charitable</option>
+            <option value="None">No exemptions</option>
+          </select>
+        </div>
+
+        <div class="filter-field">
+          <label for="f-mail">Mailing Address</label>
+          <select id="f-mail">
+            <option value="">Any mailing address</option>
+            <option value="same">Same as property</option>
+            <option value="elsewhere">Different or PO Box</option>
+            <option value="different">Different street address</option>
+            <option value="po_box">PO Box</option>
+          </select>
+        </div>
+
+        <div class="filter-field">
+          <label for="f-pool">Pool / Building</label>
+          <select id="f-pool">
+            <option value="">All parcels</option>
+            <option value="pool">Has pool</option>
+            <option value="improved">Improved (has buildings)</option>
+            <option value="vacant">Vacant land only</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <!-- Live Results Summary -->
+    <div class="results-bar">
+      <div class="results-stats" id="results-stats" aria-live="polite"></div>
+      <button id="reset-filters" class="reset-link" type="button">Reset filters</button>
+    </div>
+
+    <!-- Table View -->
+    <div id="table-view" class="table-card">
+      <div class="table-scroll">
+        <table>
+          <thead id="table-head"></thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Map View -->
+    <div id="map-view" class="map-card" hidden>
+      <div id="map"></div>
+      <div class="map-footer">
+        <div class="legend">
+          <span><i style="background:#0071e3"></i>Residential</span>
+          <span><i style="background:#bf4800"></i>Commercial</span>
+          <span><i style="background:#248a3d"></i>Agricultural</span>
+          <span><i style="background:#6e6e73"></i>Vacant</span>
+          <span><i style="background:#8944ab"></i>Institutional</span>
+        </div>
+        <span id="map-count">Showing parcels on OpenStreetMap</span>
+      </div>
+    </div>
+  </main>
+
+  <!-- Dark Editorial Section: TRIM Tax Methodology -->
+  <section id="tax" class="dark-band">
+    <div class="dark-inner">
+      <p class="eyebrow">2026 Final Millage Rates</p>
+      <h2>Calculated line for line like an official TRIM notice.</h2>
+      <p class="sub">
+        Property Appraiser CSV exports include values and exemptions, but not tax rates.
+        Project-002 combines CAMA records with county millage tables across three distinct taxable bases.
+      </p>
+
+      <div class="bento">
+        <article class="bento-card">
+          <div>
+            <div class="kicker">County Levies</div>
+            <h3>County Taxable Value</h3>
+            <p>Uses the roll's taxable value after all applicable exemptions—including Homestead and the county Senior (65+) exemption.</p>
+          </div>
+        </article>
+
+        <article class="bento-card">
+          <div>
+            <div class="kicker">Cities &amp; Independent Districts</div>
+            <h3>Other Taxable Value</h3>
+            <p>Adds back the county-only Senior exemption so municipal, fire, mosquito control, and water management levies match TRIM notices.</p>
+          </div>
+        </article>
+
+        <article class="bento-card">
+          <div>
+            <div class="kicker">School Board</div>
+            <h3>School Taxable Value</h3>
+            <p>Applies only the first $25,000 Homestead exemption and excludes the 10% non-homestead assessment cap.</p>
+          </div>
+        </article>
+
+        <article class="bento-card wide">
+          <div>
+            <div class="kicker">Verified Against 2026 TRIM</div>
+            <h3>Rounded to the cent per levy.</h3>
+            <p>
+              Each taxing authority levy is rounded to the nearest cent before summing, then combined with non-ad valorem assessments.
+              Note: City of Port St. Lucie solid waste fees (~$482) are not included in PASLC CSV exports and are noted separately.
+            </p>
+          </div>
+          <div class="millage-example">
+            <div><span>District 0011 Ad Valorem</span><strong>$4,322.19</strong></div>
+            <div><span>TRIM Notice Match</span><strong>$0.00 variance</strong></div>
+            <div><span>Mailing Check</span><strong>Normalized street &amp; ZIP</strong></div>
+          </div>
+        </article>
+
+        <article class="bento-card">
+          <div>
+            <div class="kicker">Data Provenance</div>
+            <h3>100% Public Records</h3>
+            <p>Built from Saint Lucie County Property Appraiser CAMA exports and parcel GIS shapefiles—no proprietary feeds required.</p>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-notes">
+        1. This standalone HTML prototype uses representative sample parcels structured to match the Saint Lucie County Property Appraiser (PASLC) CAMA schema and 2026 Final Millage Rates.<br>
+        2. A different mailing address on a homestead property is an informational flag for closer inspection, not proof of non-residency.<br>
+        3. Official tax bills and TRIM notices are published by the Saint Lucie County Property Appraiser (paslc.gov).
+      </div>
+      <div class="footer-bottom">
+        <span>Project-002 &middot; EducationFoundationSLC</span>
+        <span>Branch: prototype/website-draft</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Property Detail Slide-Over Sheet -->
+  <div id="sheet-backdrop" class="sheet-backdrop" aria-hidden="true">
+    <aside class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+      <div class="sheet-top">
+        <div>
+          <h3 id="sheet-title"></h3>
+          <p id="sheet-subtitle"></p>
+        </div>
+        <button id="sheet-close" class="sheet-close" type="button" aria-label="Close">&times;</button>
+      </div>
+      <div id="sheet-body"></div>
+    </aside>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script>
+    // Representative Saint Lucie County sample dataset matching Project-002's SQLite schema
+    const PARCELS = [
+      {
+        property_id: 100412, parcel_id: "3420-605-0014-000-2",
+        address: "1842 SW Bayshore Blvd", jurisdiction: "Port St. Lucie", zip: "34984",
+        subdivision: "Port St Lucie Section 33", category: "Residential", land_use_desc: "Single Family",
+        owner: "MARTINEZ ELENA & CARLOS", mailing: "1842 SW Bayshore Blvd, Port St Lucie, FL 34984",
+        mail_status: "same", out_of_state: 0,
+        year_built: 2019, living_area: 2240, bedrooms: 4, full_baths: 3, acres: 0.24, pool: 1,
+        just_value: 448000, assessed_value: 352000, county_taxable: 252000, other_taxable: 302000, school_taxable: 327000,
+        exemptions: ["Homestead", "Senior"], district: "0011", non_ad_valorem: 312.50,
+        last_sale_date: "2019-06-14", last_sale_price: 318000,
+        lat: 27.2730, lon: -80.3582, lot_w: 80, lot_d: 125,
+        legal: "PORT ST LUCIE SECTION 33 BLK 2145 LOT 14"
+      },
+      {
+        property_id: 100889, parcel_id: "3420-520-0102-000-8",
+        address: "410 NW Peacock Blvd", jurisdiction: "Port St. Lucie", zip: "34986",
+        subdivision: "St Lucie West Plat 42", category: "Residential", land_use_desc: "Single Family",
+        owner: "HARPER DAVID R", mailing: "PO Box 880412, Port St Lucie, FL 34988",
+        mail_status: "po_box", out_of_state: 0,
+        year_built: 2006, living_area: 2680, bedrooms: 4, full_baths: 3, acres: 0.29, pool: 1,
+        just_value: 525000, assessed_value: 410000, county_taxable: 360000, other_taxable: 360000, school_taxable: 385000,
+        exemptions: ["Homestead"], district: "0011", non_ad_valorem: 295.00,
+        last_sale_date: "2016-11-02", last_sale_price: 289000,
+        lat: 27.3118, lon: -80.4024, lot_w: 90, lot_d: 140,
+        legal: "ST LUCIE WEST PLAT 42 LOT 102"
+      },
+      {
+        property_id: 101204, parcel_id: "3420-710-0048-000-5",
+        address: "2915 SW Rosser Blvd", jurisdiction: "Port St. Lucie", zip: "34953",
+        subdivision: "Port St Lucie Section 34", category: "Residential", land_use_desc: "Single Family",
+        owner: "CHEN WEI & LINDA", mailing: "2915 SW Rosser Blvd, Port St Lucie, FL 34953",
+        mail_status: "same", out_of_state: 0,
+        year_built: 2022, living_area: 2110, bedrooms: 3, full_baths: 2, acres: 0.23, pool: 0,
+        just_value: 412000, assessed_value: 398000, county_taxable: 348000, other_taxable: 348000, school_taxable: 373000,
+        exemptions: ["Homestead"], district: "0011", non_ad_valorem: 312.50,
+        last_sale_date: "2022-04-28", last_sale_price: 405000,
+        lat: 27.2485, lon: -80.3895, lot_w: 80, lot_d: 125,
+        legal: "PORT ST LUCIE SECTION 34 BLK 2401 LOT 48"
+      },
+      {
+        property_id: 101531, parcel_id: "2409-601-0021-000-9",
+        address: "714 S Ocean Dr Unit 402", jurisdiction: "Fort Pierce", zip: "34949",
+        subdivision: "Ocean Village Condo", category: "Residential", land_use_desc: "Condominium",
+        owner: "NORTHCOAST HOLDINGS LLC", mailing: "1450 Broadway Ste 2200, New York, NY 10018",
+        mail_status: "different", out_of_state: 1,
+        year_built: 1998, living_area: 1480, bedrooms: 2, full_baths: 2, acres: 0.00, pool: 0,
+        just_value: 465000, assessed_value: 465000, county_taxable: 465000, other_taxable: 465000, school_taxable: 465000,
+        exemptions: [], district: "0012", non_ad_valorem: 184.00,
+        last_sale_date: "2023-08-19", last_sale_price: 472000,
+        lat: 27.4562, lon: -80.2894, lot_w: 0, lot_d: 0,
+        legal: "OCEAN VILLAGE CONDO BLDG 4 UNIT 402"
+      },
+      {
+        property_id: 101902, parcel_id: "2409-504-0008-000-1",
+        address: "118 N 2nd St", jurisdiction: "Fort Pierce", zip: "34950",
+        subdivision: "Downtown Fort Pierce", category: "Commercial", land_use_desc: "Store / Retail",
+        owner: "SUNRISE HARBOR RETAIL INC", mailing: "500 S Indian River Dr, Fort Pierce, FL 34950",
+        mail_status: "different", out_of_state: 0,
+        year_built: 1974, living_area: 4820, bedrooms: 0, full_baths: 0, acres: 0.19, pool: 0,
+        just_value: 890000, assessed_value: 845000, county_taxable: 845000, other_taxable: 845000, school_taxable: 890000,
+        exemptions: [], district: "0012", non_ad_valorem: 640.00,
+        last_sale_date: "2018-02-11", last_sale_price: 620000,
+        lat: 27.4481, lon: -80.3249, lot_w: 65, lot_d: 128,
+        legal: "FORT PIERCE ORIGINAL TOWN BLK 12 LOT 8"
+      },
+      {
+        property_id: 102145, parcel_id: "3420-802-0019-000-4",
+        address: "1024 SE Walton Rd", jurisdiction: "Port St. Lucie", zip: "34952",
+        subdivision: "Sandpiper Bay", category: "Residential", land_use_desc: "Single Family",
+        owner: "O'CONNOR PATRICIA", mailing: "1024 SE Walton Rd, Port St Lucie, FL 34952",
+        mail_status: "same", out_of_state: 0,
+        year_built: 1989, living_area: 1860, bedrooms: 3, full_baths: 2, acres: 0.25, pool: 1,
+        just_value: 368000, assessed_value: 244000, county_taxable: 0, other_taxable: 0, school_taxable: 0,
+        exemptions: ["Homestead", "Disabled Veteran"], district: "0011", non_ad_valorem: 295.00,
+        last_sale_date: "2008-05-22", last_sale_price: 192000,
+        lat: 27.2722, lon: -80.3125, lot_w: 85, lot_d: 130,
+        legal: "SANDPIPER BAY UNIT 3 BLK 19 LOT 19"
+      },
+      {
+        property_id: 102488, parcel_id: "1432-111-0003-000-0",
+        address: "2940 N Indian River Dr", jurisdiction: "St. Lucie Village", zip: "34946",
+        subdivision: "St Lucie Village Historic", category: "Residential", land_use_desc: "Single Family",
+        owner: "BENNETT MARGARET TRUST", mailing: "2940 N Indian River Dr, Fort Pierce, FL 34946",
+        mail_status: "same", out_of_state: 0,
+        year_built: 1954, living_area: 2390, bedrooms: 3, full_baths: 2, acres: 0.62, pool: 0,
+        just_value: 685000, assessed_value: 492000, county_taxable: 437000, other_taxable: 437000, school_taxable: 467000,
+        exemptions: ["Homestead", "Widow"], district: "0014", non_ad_valorem: 220.00,
+        last_sale_date: "2004-09-10", last_sale_price: 310000,
+        lat: 27.4938, lon: -80.3422, lot_w: 115, lot_d: 235,
+        legal: "ST LUCIE VILLAGE RIVERVIEW TRACT 3"
+      },
+      {
+        property_id: 102770, parcel_id: "3410-210-0005-000-7",
+        address: "8420 Glades Cut Off Rd", jurisdiction: "Unincorporated", zip: "34986",
+        subdivision: "Unplatted Acreage", category: "Agricultural", land_use_desc: "Citrus / Grove",
+        owner: "TREASURE COAST GROVES LP", mailing: "2100 Okeechobee Rd, Fort Pierce, FL 34950",
+        mail_status: "different", out_of_state: 0,
+        year_built: 0, living_area: 0, bedrooms: 0, full_baths: 0, acres: 18.50, pool: 0,
+        just_value: 740000, assessed_value: 148000, county_taxable: 148000, other_taxable: 148000, school_taxable: 148000,
+        exemptions: [], district: "0001", non_ad_valorem: 112.00,
+        last_sale_date: "2011-03-04", last_sale_price: 410000,
+        lat: 27.3612, lon: -80.4310, lot_w: 660, lot_d: 1220,
+        legal: "SEC 10 TWP 36S RGE 39E S 1/2 OF NE 1/4"
+      },
+      {
+        property_id: 103015, parcel_id: "3420-901-0114-000-3",
+        address: "10840 SW Tradition Pkwy", jurisdiction: "Port St. Lucie", zip: "34987",
+        subdivision: "Tradition Commercial", category: "Commercial", land_use_desc: "Office Building",
+        owner: "TRADITION MEDICAL PLAZA LLC", mailing: "10840 SW Tradition Pkwy, Port St Lucie, FL 34987",
+        mail_status: "same", out_of_state: 0,
+        year_built: 2021, living_area: 11400, bedrooms: 0, full_baths: 0, acres: 1.35, pool: 0,
+        just_value: 2850000, assessed_value: 2710000, county_taxable: 2710000, other_taxable: 2710000, school_taxable: 2850000,
+        exemptions: [], district: "0011", non_ad_valorem: 1420.00,
+        last_sale_date: "2021-12-15", last_sale_price: 2650000,
+        lat: 27.2692, lon: -80.4355, lot_w: 220, lot_d: 268,
+        legal: "TRADITION PLAT 74 COMMERCIAL PARCEL B"
+      },
+      {
+        property_id: 103490, parcel_id: "3420-612-0077-000-6",
+        address: "3312 SW Darwin Blvd", jurisdiction: "Port St. Lucie", zip: "34953",
+        subdivision: "Port St Lucie Section 30", category: "Vacant", land_use_desc: "Vacant Residential",
+        owner: "ATLANTIC LAND VENTURES LLC", mailing: "701 Brickell Ave Ste 1550, Miami, FL 33131",
+        mail_status: "different", out_of_state: 0,
+        year_built: 0, living_area: 0, bedrooms: 0, full_baths: 0, acres: 0.23, pool: 0,
+        just_value: 78000, assessed_value: 71500, county_taxable: 71500, other_taxable: 71500, school_taxable: 78000,
+        exemptions: [], district: "0011", non_ad_valorem: 148.00,
+        last_sale_date: "2024-01-22", last_sale_price: 76000,
+        lat: 27.2355, lon: -80.3712, lot_w: 80, lot_d: 125,
+        legal: "PORT ST LUCIE SECTION 30 BLK 1804 LOT 77"
+      },
+      {
+        property_id: 103812, parcel_id: "3420-415-0033-000-1",
+        address: "645 NW Prima Vista Blvd", jurisdiction: "Port St. Lucie", zip: "34983",
+        subdivision: "Port St Lucie Section 12", category: "Institutional", land_use_desc: "Church / Religious",
+        owner: "ST LUCIE COMMUNITY FELLOWSHIP", mailing: "645 NW Prima Vista Blvd, Port St Lucie, FL 34983",
+        mail_status: "same", out_of_state: 0,
+        year_built: 1995, living_area: 8900, bedrooms: 0, full_baths: 0, acres: 2.40, pool: 0,
+        just_value: 1620000, assessed_value: 1620000, county_taxable: 0, other_taxable: 0, school_taxable: 0,
+        exemptions: ["Religious"], district: "0011", non_ad_valorem: 410.00,
+        last_sale_date: "1994-07-08", last_sale_price: 215000,
+        lat: 27.3168, lon: -80.3510, lot_w: 310, lot_d: 338,
+        legal: "PORT ST LUCIE SECTION 12 TRACT C"
+      },
+      {
+        property_id: 104120, parcel_id: "2422-302-0011-000-4",
+        address: "3108 Sunrise Blvd", jurisdiction: "Fort Pierce", zip: "34982",
+        subdivision: "Sunrise Estates", category: "Residential", land_use_desc: "Single Family",
+        owner: "JACKSON TERESA M", mailing: "3108 Sunrise Blvd, Fort Pierce, FL 34982",
+        mail_status: "same", out_of_state: 0,
+        year_built: 1982, living_area: 1640, bedrooms: 3, full_baths: 2, acres: 0.28, pool: 0,
+        just_value: 294000, assessed_value: 218000, county_taxable: 168000, other_taxable: 168000, school_taxable: 193000,
+        exemptions: ["Homestead"], district: "0012", non_ad_valorem: 245.00,
+        last_sale_date: "2014-08-30", last_sale_price: 146000,
+        lat: 27.4021, lon: -80.3335, lot_w: 90, lot_d: 135,
+        legal: "SUNRISE ESTATES UNIT 2 BLK 4 LOT 11"
+      },
+      {
+        property_id: 104590, parcel_id: "3420-533-0062-000-2",
+        address: "1492 SW Paar Dr", jurisdiction: "Port St. Lucie", zip: "34953",
+        subdivision: "Port St Lucie Section 31", category: "Residential", land_use_desc: "Single Family",
+        owner: "ROBINSON KENNETH & JOYCE", mailing: "88 Maplewood Ave, Cranston, RI 02920",
+        mail_status: "different", out_of_state: 1,
+        year_built: 2020, living_area: 1980, bedrooms: 3, full_baths: 2, acres: 0.23, pool: 1,
+        just_value: 381000, assessed_value: 342000, county_taxable: 292000, other_taxable: 292000, school_taxable: 317000,
+        exemptions: ["Homestead"], district: "0011", non_ad_valorem: 312.50,
+        last_sale_date: "2020-10-12", last_sale_price: 299000,
+        lat: 27.2415, lon: -80.3544, lot_w: 80, lot_d: 125,
+        legal: "PORT ST LUCIE SECTION 31 BLK 1980 LOT 62"
+      },
+      {
+        property_id: 104910, parcel_id: "2334-101-0009-000-5",
+        address: "5420 Selvitz Rd", jurisdiction: "Unincorporated", zip: "34981",
+        subdivision: "White City Acreage", category: "Residential", land_use_desc: "Single Family",
+        owner: "DELGADO ROBERT A", mailing: "5420 Selvitz Rd, Fort Pierce, FL 34981",
+        mail_status: "same", out_of_state: 0,
+        year_built: 1991, living_area: 2050, bedrooms: 3, full_baths: 2, acres: 1.15, pool: 1,
+        just_value: 432000, assessed_value: 318000, county_taxable: 218000, other_taxable: 268000, school_taxable: 293000,
+        exemptions: ["Homestead", "Senior"], district: "0001", non_ad_valorem: 190.00,
+        last_sale_date: "2012-07-19", last_sale_price: 210000,
+        lat: 27.3675, lon: -80.3490, lot_w: 165, lot_d: 304,
+        legal: "WHITE CITY SUBD TRACT 9"
+      },
+      {
+        property_id: 105204, parcel_id: "3420-810-0004-000-9",
+        address: "880 SE Floresta Dr", jurisdiction: "Port St. Lucie", zip: "34983",
+        subdivision: "Port St Lucie Section 8", category: "Residential", land_use_desc: "Single Family",
+        owner: "NGUYEN MINH T", mailing: "880 SE Floresta Dr, Port St Lucie, FL 34983",
+        mail_status: "same", out_of_state: 0,
+        year_built: 2023, living_area: 2490, bedrooms: 4, full_baths: 3, acres: 0.24, pool: 1,
+        just_value: 495000, assessed_value: 488000, county_taxable: 438000, other_taxable: 438000, school_taxable: 463000,
+        exemptions: ["Homestead"], district: "0011", non_ad_valorem: 312.50,
+        last_sale_date: "2023-09-05", last_sale_price: 492000,
+        lat: 27.2894, lon: -80.3418, lot_w: 80, lot_d: 130,
+        legal: "PORT ST LUCIE SECTION 8 BLK 612 LOT 4"
+      },
+      {
+        property_id: 105511, parcel_id: "2409-610-0016-000-3",
+        address: "1905 Seaway Dr", jurisdiction: "Fort Pierce", zip: "34949",
+        subdivision: "South Beach Marina", category: "Commercial", land_use_desc: "Restaurant / Marina",
+        owner: "INLET HARBOR HOSPITALITY LLC", mailing: "PO Box 1420, Fort Pierce, FL 34954",
+        mail_status: "po_box", out_of_state: 0,
+        year_built: 2004, living_area: 5400, bedrooms: 0, full_baths: 0, acres: 0.72, pool: 0,
+        just_value: 1420000, assessed_value: 1360000, county_taxable: 1360000, other_taxable: 1360000, school_taxable: 1420000,
+        exemptions: [], district: "0012", non_ad_valorem: 880.00,
+        last_sale_date: "2019-03-27", last_sale_price: 1180000,
+        lat: 27.4658, lon: -80.3031, lot_w: 140, lot_d: 224,
+        legal: "SOUTH BEACH PLAT 4 LOT 16"
+      },
+      {
+        property_id: 105880, parcel_id: "3420-690-0088-000-7",
+        address: "2150 SW Gatlin Blvd", jurisdiction: "Port St. Lucie", zip: "34953",
+        subdivision: "Port St Lucie Section 33", category: "Vacant", land_use_desc: "Vacant Commercial",
+        owner: "GATLIN CORRIDOR PARTNERS", mailing: "4400 PGA Blvd Ste 600, Palm Beach Gardens, FL 33410",
+        mail_status: "different", out_of_state: 0,
+        year_built: 0, living_area: 0, bedrooms: 0, full_baths: 0, acres: 1.10, pool: 0,
+        just_value: 520000, assessed_value: 495000, county_taxable: 495000, other_taxable: 495000, school_taxable: 520000,
+        exemptions: [], district: "0011", non_ad_valorem: 310.00,
+        last_sale_date: "2022-11-18", last_sale_price: 490000,
+        lat: 27.2602, lon: -80.4058, lot_w: 190, lot_d: 252,
+        legal: "PORT ST LUCIE SECTION 33 COMMERCIAL TRACT 88"
+      },
+      {
+        property_id: 106102, parcel_id: "3420-730-0029-000-1",
+        address: "4208 SW Savona Blvd", jurisdiction: "Port St. Lucie", zip: "34953",
+        subdivision: "Port St Lucie Section 32", category: "Residential", land_use_desc: "Single Family",
+        owner: "ALVAREZ SOFIA", mailing: "4208 SW Savona Blvd, Port St Lucie, FL 34953",
+        mail_status: "same", out_of_state: 0,
+        year_built: 2015, living_area: 1890, bedrooms: 3, full_baths: 2, acres: 0.23, pool: 0,
+        just_value: 355000, assessed_value: 288000, county_taxable: 238000, other_taxable: 238000, school_taxable: 263000,
+        exemptions: ["Homestead"], district: "0011", non_ad_valorem: 312.50,
+        last_sale_date: "2017-05-03", last_sale_price: 224000,
+        lat: 27.2538, lon: -80.3788, lot_w: 80, lot_d: 125,
+        legal: "PORT ST LUCIE SECTION 32 BLK 2210 LOT 29"
+      }
+    ];
+
+    // 2026 Millage rates by district (structured like website/tax_rates.csv)
+    const LEVIES_BY_DISTRICT = {
+      "0011": [
+        { name: "St. Lucie County General", basis: "county", rate: 4.1859 },
+        { name: "Fine & Forfeiture / Sheriff", basis: "county", rate: 3.1200 },
+        { name: "St. Lucie County School Board", basis: "school", rate: 5.8940 },
+        { name: "City of Port St. Lucie", basis: "other", rate: 5.2000 },
+        { name: "St. Lucie County Fire District", basis: "other", rate: 3.0000 },
+        { name: "SFWMD / Mosquito / Children's", basis: "other", rate: 0.8920 }
+      ],
+      "0012": [
+        { name: "St. Lucie County General", basis: "county", rate: 4.1859 },
+        { name: "Fine & Forfeiture / Sheriff", basis: "county", rate: 3.1200 },
+        { name: "St. Lucie County School Board", basis: "school", rate: 5.8940 },
+        { name: "City of Fort Pierce", basis: "other", rate: 6.9000 },
+        { name: "St. Lucie County Fire District", basis: "other", rate: 3.0000 },
+        { name: "SFWMD / Mosquito / Children's", basis: "other", rate: 0.8920 }
+      ],
+      "0014": [
+        { name: "St. Lucie County General", basis: "county", rate: 4.1859 },
+        { name: "Fine & Forfeiture / Sheriff", basis: "county", rate: 3.1200 },
+        { name: "St. Lucie County School Board", basis: "school", rate: 5.8940 },
+        { name: "Town of St. Lucie Village", basis: "other", rate: 1.8500 },
+        { name: "St. Lucie County Fire District", basis: "other", rate: 3.0000 },
+        { name: "SFWMD / Mosquito / Children's", basis: "other", rate: 0.8920 }
+      ],
+      "0001": [
+        { name: "St. Lucie County General", basis: "county", rate: 4.1859 },
+        { name: "Fine & Forfeiture / Sheriff", basis: "county", rate: 3.1200 },
+        { name: "St. Lucie County School Board", basis: "school", rate: 5.8940 },
+        { name: "Unincorporated MSTU", basis: "other", rate: 0.8700 },
+        { name: "St. Lucie County Fire District", basis: "other", rate: 3.0000 },
+        { name: "SFWMD / Mosquito / Children's", basis: "other", rate: 0.8920 }
+      ]
+    };
+
+    const CATEGORY_COLORS = {
+      Residential: "#0071e3",
+      Commercial: "#bf4800",
+      Agricultural: "#248a3d",
+      Vacant: "#6e6e73",
+      Institutional: "#8944ab"
+    };
+
+    // Compute TRIM-style tax breakdown for each parcel
+    function computeTaxes(p) {
+      const levies = LEVIES_BY_DISTRICT[p.district] || LEVIES_BY_DISTRICT["0011"];
+      let adValorem = 0;
+      const lines = levies.map(l => {
+        const taxable = l.basis === "county" ? p.county_taxable
+          : l.basis === "school" ? p.school_taxable : p.other_taxable;
+        const amount = Math.round((taxable / 1000) * l.rate * 100) / 100;
+        adValorem = Math.round((adValorem + amount) * 100) / 100;
+        return { ...l, taxable, amount };
+      });
+      const total = Math.round((adValorem + p.non_ad_valorem) * 100) / 100;
+      return { lines, adValorem, total };
+    }
+
+    PARCELS.forEach(p => {
+      const t = computeTaxes(p);
+      p.est_ad_valorem = t.adValorem;
+      p.est_tax = t.total;
+      p.tax_lines = t.lines;
+    });
+
+    // State
+    const state = {
+      view: "tax",
+      sortBy: "est_tax",
+      sortDir: "desc",
+      near: null // { lat, lon, radiusMiles }
+    };
+
+    // Formatting helpers
+    const fmtUSD = n => "$" + Math.round(n).toLocaleString("en-US");
+    const fmtUSD2 = n => "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const fmtNum = n => n ? n.toLocaleString("en-US") : "—";
+
+    function distMiles(lat1, lon1, lat2, lon2) {
+      const dLat = (lat2 - lat1) * 69.0;
+      const dLon = (lon2 - lon1) * 69.0 * Math.cos(lat1 * Math.PI / 180);
+      return Math.sqrt(dLat * dLat + dLon * dLon);
+    }
+
+    function getFiltered() {
+      const q = document.getElementById("search").value.trim().toLowerCase();
+      const cat = document.getElementById("f-category").value;
+      const jur = document.getElementById("f-jurisdiction").value;
+      const ex = document.getElementById("f-exemption").value;
+      const mail = document.getElementById("f-mail").value;
+      const pool = document.getElementById("f-pool").value;
+
+      let list = PARCELS.filter(p => {
+        if (q) {
+          const hay = `${p.address} ${p.owner} ${p.parcel_id} ${p.subdivision} ${p.zip}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        if (cat && p.category !== cat) return false;
+        if (jur && p.jurisdiction !== jur) return false;
+        if (ex) {
+          if (ex === "None" && p.exemptions.length > 0) return false;
+          if (ex !== "None" && !p.exemptions.includes(ex)) return false;
+        }
+        if (mail) {
+          if (mail === "elsewhere" && p.mail_status === "same") return false;
+          if (mail !== "elsewhere" && p.mail_status !== mail) return false;
+        }
+        if (pool === "pool" && !p.pool) return false;
+        if (pool === "improved" && p.living_area <= 0) return false;
+        if (pool === "vacant" && p.living_area > 0) return false;
+        if (state.near) {
+          const d = distMiles(state.near.lat, state.near.lon, p.lat, p.lon);
+          if (d > state.near.radiusMiles) return false;
+        }
+        return true;
+      });
+
+      list.sort((a, b) => {
+        let va = a[state.sortBy], vb = b[state.sortBy];
+        if (typeof va === "string") {
+          return state.sortDir === "asc" ? va.localeCompare(vb) : vb.localeCompare(va);
+        }
+        return state.sortDir === "asc" ? (va - vb) : (vb - va);
+      });
+      return list;
+    }
+
+    // Table rendering
+    const COLUMNS = {
+      tax: [
+        { key: "address", label: "Property" },
+        { key: "owner", label: "Owner & Mail" },
+        { key: "just_value", label: "Just Value", num: true },
+        { key: "county_taxable", label: "Taxable", num: true },
+        { key: "exemptions", label: "Exemptions" },
+        { key: "est_tax", label: "Est. 2026 Tax", num: true }
+      ],
+      property: [
+        { key: "address", label: "Property" },
+        { key: "land_use_desc", label: "Use" },
+        { key: "year_built", label: "Built", num: true },
+        { key: "living_area", label: "Sq Ft", num: true },
+        { key: "acres", label: "Acres", num: true },
+        { key: "last_sale_price", label: "Last Sale", num: true }
+      ]
+    };
+
+    function renderTable(rows) {
+      const cols = COLUMNS[state.view === "map" ? "tax" : state.view];
+      const thead = document.getElementById("table-head");
+      const tbody = document.getElementById("table-body");
+
+      thead.innerHTML = "<tr>" + cols.map(c => {
+        const sorted = state.sortBy === c.key ? ` sorted ${state.sortDir}` : "";
+        const align = c.num ? " num" : "";
+        return `<th data-key="${c.key}" class="${align}${sorted}">${c.label}</th>`;
+      }).join("") + "</tr>";
+
+      if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="${cols.length}" class="empty-state">No parcels match the current filters.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = rows.map(p => {
+        if (state.view === "property") {
+          return `<tr data-id="${p.property_id}">
+            <td><div class="addr-main">${p.address}</div><div class="addr-sub">${p.jurisdiction} ${p.zip} &middot; ${p.parcel_id}</div></td>
+            <td>${p.land_use_desc}${p.pool ? ' <span class="pill">Pool</span>' : ""}</td>
+            <td class="num">${p.year_built || "—"}</td>
+            <td class="num">${fmtNum(p.living_area)}</td>
+            <td class="num">${p.acres ? p.acres.toFixed(2) : "—"}</td>
+            <td class="num">${fmtUSD(p.last_sale_price)}<div class="addr-sub">${p.last_sale_date}</div></td>
+          </tr>`;
+        }
+        const mailPill = p.mail_status === "same"
+          ? ""
+          : `<span class="pill warn">${p.mail_status === "po_box" ? "PO Box" : "Mail elsewhere"}</span>`;
+        const exPills = p.exemptions.length
+          ? p.exemptions.map(e => `<span class="pill ok">${e}</span>`).join("")
+          : `<span class="addr-sub">None</span>`;
+        return `<tr data-id="${p.property_id}">
+          <td><div class="addr-main">${p.address}</div><div class="addr-sub">${p.jurisdiction} ${p.zip} &middot; ${p.category}</div></td>
+          <td class="owner-cell"><div>${p.owner}</div><div class="addr-sub">${mailPill || "Same mailing address"}</div></td>
+          <td class="num">${fmtUSD(p.just_value)}</td>
+          <td class="num">${fmtUSD(p.county_taxable)}</td>
+          <td>${exPills}</td>
+          <td class="num tax-val">${fmtUSD2(p.est_tax)}</td>
+        </tr>`;
+      }).join("");
+    }
+
+    // Map rendering
+    let mapInstance = null;
+    let markersLayer = null;
+
+    function renderMap(rows) {
+      if (typeof L === "undefined") {
+        document.getElementById("map").innerHTML = `<div class="empty-state">Map tiles require an internet connection (Leaflet unavailable).</div>`;
+        return;
+      }
+      if (!mapInstance) {
+        mapInstance = L.map("map").setView([27.31, -80.36], 11);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: "&copy; OpenStreetMap contributors",
+          maxZoom: 19
+        }).addTo(mapInstance);
+        markersLayer = L.layerGroup().addTo(mapInstance);
+      }
+      markersLayer.clearLayers();
+      rows.forEach(p => {
+        const color = CATEGORY_COLORS[p.category] || "#0071e3";
+        const m = L.circleMarker([p.lat, p.lon], {
+          radius: 7,
+          fillColor: color,
+          color: "#ffffff",
+          weight: 2,
+          fillOpacity: 0.92
+        });
+        m.bindTooltip(`<strong>${p.address}</strong><br>${fmtUSD(p.just_value)} &middot; Est. tax ${fmtUSD2(p.est_tax)}`);
+        m.on("click", () => openSheet(p.property_id));
+        m.addTo(markersLayer);
+      });
+      document.getElementById("map-count").textContent = `Showing ${rows.length} parcel${rows.length === 1 ? "" : "s"}`;
+      setTimeout(() => mapInstance.invalidateSize(), 60);
+    }
+
+    // Summary stats
+    function renderSummary(rows) {
+      const totalJust = rows.reduce((s, p) => s + p.just_value, 0);
+      const totalTax = rows.reduce((s, p) => s + p.est_tax, 0);
+      const avgTax = rows.length ? totalTax / rows.length : 0;
+      document.getElementById("results-stats").innerHTML = `
+        <span><strong>${rows.length}</strong> parcel${rows.length === 1 ? "" : "s"}</span>
+        <span>Total just value <strong>${fmtUSD(totalJust)}</strong></span>
+        <span>Total est. 2026 tax <strong>${fmtUSD(totalTax)}</strong></span>
+        <span>Avg. est. tax <strong>${fmtUSD2(avgTax)}</strong></span>
+      `;
+    }
+
+    function update() {
+      const rows = getFiltered();
+      renderSummary(rows);
+      const isMap = state.view === "map";
+      document.getElementById("table-view").hidden = isMap;
+      document.getElementById("map-view").hidden = !isMap;
+      if (isMap) renderMap(rows);
+      else renderTable(rows);
+    }
+
+    // Lot SVG generator
+    function buildLotSvg(p) {
+      if (!p.lot_w || !p.lot_d) return "";
+      const ratio = Math.min(260 / p.lot_w, 140 / p.lot_d);
+      const w = Math.max(70, Math.round(p.lot_w * ratio));
+      const d = Math.max(55, Math.round(p.lot_d * ratio));
+      const x = Math.round((360 - w) / 2);
+      const y = Math.round((200 - d) / 2);
+      return `<svg id="lot-svg" viewBox="0 0 360 200" width="360" height="200" xmlns="http://www.w3.org/2000/svg">
+        <rect x="${x}" y="${y}" width="${w}" height="${d}" fill="#ffffff" stroke="#1d1d1f" stroke-width="1.5" rx="2"/>
+        <text x="${x + w / 2}" y="${y - 8}" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" fill="#6e6e73">${p.lot_w} ft</text>
+        <text x="${x + w / 2}" y="${y + d + 16}" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" fill="#6e6e73">${p.lot_w} ft</text>
+        <text x="${x - 10}" y="${y + d / 2 + 4}" text-anchor="end" font-family="-apple-system, sans-serif" font-size="11" fill="#6e6e73">${p.lot_d} ft</text>
+        <text x="${x + w + 10}" y="${y + d / 2 + 4}" text-anchor="start" font-family="-apple-system, sans-serif" font-size="11" fill="#6e6e73">${p.lot_d} ft</text>
+        <text x="${x + w / 2}" y="${y + d / 2 + 4}" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="12" font-weight="600" fill="#1d1d1f">${p.acres.toFixed(2)} ac</text>
+      </svg>`;
+    }
+
+    // Slide-over detail sheet
+    function openSheet(id) {
+      const p = PARCELS.find(x => x.property_id === Number(id));
+      if (!p) return;
+      document.getElementById("sheet-title").textContent = p.address;
+      document.getElementById("sheet-subtitle").textContent = `${p.jurisdiction}, FL ${p.zip} · Parcel ${p.parcel_id}`;
+
+      const mailNote = p.mail_status === "same"
+        ? `<span class="pill ok">Same as property</span>`
+        : `<span class="pill warn">${p.mail_status === "po_box" ? "PO Box" : "Different address"}${p.out_of_state ? " · Out of state" : ""}</span>`;
+
+      const trimRows = p.tax_lines.map(l => `
+        <tr>
+          <td>${l.name}</td>
+          <td class="num">${fmtUSD(l.taxable)}</td>
+          <td class="num">${l.rate.toFixed(4)}</td>
+          <td class="num">${fmtUSD2(l.amount)}</td>
+        </tr>
+      `).join("");
+
+      const lotHtml = p.lot_w ? `
+        <div class="sheet-section">
+          <h4>Parcel Lot Drawing</h4>
+          <div class="lot-box">
+            ${buildLotSvg(p)}
+            <div class="lot-actions">
+              <span>Approx. ${p.lot_w} &times; ${p.lot_d} ft (${p.acres.toFixed(2)} acres)</span>
+              <button class="reset-link" type="button" id="download-svg">Download SVG</button>
+            </div>
+          </div>
+        </div>
+      ` : "";
+
+      document.getElementById("sheet-body").innerHTML = `
+        <div class="sheet-section">
+          <h4>Ownership &amp; Mailing</h4>
+          <div class="kv-grid">
+            <div class="kv-item"><span>Owner</span><strong>${p.owner}</strong></div>
+            <div class="kv-item"><span>Mailing Status</span><strong>${mailNote}</strong></div>
+            <div class="kv-item" style="grid-column:1/-1"><span>Mailing Address</span><strong>${p.mailing}</strong></div>
+          </div>
+        </div>
+
+        <div class="sheet-section">
+          <h4>2026 TRIM Tax Estimate (District ${p.district})</h4>
+          <table class="trim-table">
+            <thead>
+              <tr><th>Taxing Authority</th><th class="num">Taxable</th><th class="num">Millage</th><th class="num">Est. Tax</th></tr>
+            </thead>
+            <tbody>
+              ${trimRows}
+              <tr><td colspan="3">Non-Ad Valorem Assessments</td><td class="num">${fmtUSD2(p.non_ad_valorem)}</td></tr>
+              <tr class="total-row"><td colspan="3">Estimated 2026 Total</td><td class="num">${fmtUSD2(p.est_tax)}</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="sheet-section">
+          <h4>Values &amp; Exemptions</h4>
+          <div class="kv-grid">
+            <div class="kv-item"><span>Just (Market) Value</span><strong>${fmtUSD(p.just_value)}</strong></div>
+            <div class="kv-item"><span>Assessed Value</span><strong>${fmtUSD(p.assessed_value)}</strong></div>
+            <div class="kv-item"><span>Exemptions</span><strong>${p.exemptions.length ? p.exemptions.join(", ") : "None"}</strong></div>
+            <div class="kv-item"><span>Last Sale</span><strong>${fmtUSD(p.last_sale_price)} (${p.last_sale_date})</strong></div>
+          </div>
+        </div>
+
+        <div class="sheet-section">
+          <h4>Building &amp; Land</h4>
+          <div class="kv-grid">
+            <div class="kv-item"><span>Land Use</span><strong>${p.category} &middot; ${p.land_use_desc}</strong></div>
+            <div class="kv-item"><span>Year Built</span><strong>${p.year_built || "Vacant / N/A"}</strong></div>
+            <div class="kv-item"><span>Living Area</span><strong>${p.living_area ? fmtNum(p.living_area) + " sq ft" : "—"}</strong></div>
+            <div class="kv-item"><span>Beds / Baths / Pool</span><strong>${p.bedrooms ? `${p.bedrooms} bd / ${p.full_baths} ba` : "—"} &middot; ${p.pool ? "Pool" : "No pool"}</strong></div>
+          </div>
+        </div>
+
+        ${lotHtml}
+
+        <div class="sheet-section">
+          <h4>Legal Description</h4>
+          <p style="margin:0; font-size:13px; color:var(--text-secondary);">${p.legal}</p>
+        </div>
+      `;
+
+      const dlBtn = document.getElementById("download-svg");
+      if (dlBtn) {
+        dlBtn.addEventListener("click", () => {
+          const svg = document.getElementById("lot-svg").outerHTML;
+          const blob = new Blob([svg], { type: "image/svg+xml" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `${p.parcel_id}-lot.svg`;
+          a.click();
+          URL.revokeObjectURL(url);
+        });
+      }
+
+      const bd = document.getElementById("sheet-backdrop");
+      bd.classList.add("open");
+      bd.setAttribute("aria-hidden", "false");
+    }
+
+    function closeSheet() {
+      const bd = document.getElementById("sheet-backdrop");
+      bd.classList.remove("open");
+      bd.setAttribute("aria-hidden", "true");
+    }
+
+    // Event bindings
+    document.querySelectorAll(".segmented button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".segmented button").forEach(b => b.setAttribute("aria-selected", "false"));
+        btn.setAttribute("aria-selected", "true");
+        state.view = btn.dataset.view;
+        update();
+      });
+    });
+
+    ["search", "f-category", "f-jurisdiction", "f-exemption", "f-mail", "f-pool"].forEach(id => {
+      document.getElementById(id).addEventListener("input", update);
+      document.getElementById(id).addEventListener("change", update);
+    });
+
+    document.getElementById("table-head").addEventListener("click", e => {
+      const th = e.target.closest("th[data-key]");
+      if (!th) return;
+      const key = th.dataset.key;
+      if (state.sortBy === key) state.sortDir = state.sortDir === "asc" ? "desc" : "asc";
+      else { state.sortBy = key; state.sortDir = key === "address" || key === "owner" ? "asc" : "desc"; }
+      update();
+    });
+
+    document.getElementById("table-body").addEventListener("click", e => {
+      const tr = e.target.closest("tr[data-id]");
+      if (tr) openSheet(tr.dataset.id);
+    });
+
+    document.getElementById("near-btn").addEventListener("click", function () {
+      if (state.near) {
+        state.near = null;
+        this.classList.remove("active");
+        this.textContent = "Near me (5 mi)";
+        update();
+        return;
+      }
+      // Default fallback center: Port St. Lucie City Hall; use browser geolocation if granted
+      const applyNear = (lat, lon, label) => {
+        state.near = { lat, lon, radiusMiles: 5 };
+        this.classList.add("active");
+        this.textContent = label;
+        update();
+      };
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          pos => applyNear(pos.coords.latitude, pos.coords.longitude, "Near you (5 mi) ×"),
+          () => applyNear(27.2730, -80.3582, "Near PSL Center (5 mi) ×"),
+          { timeout: 3000 }
+        );
+      } else {
+        applyNear(27.2730, -80.3582, "Near PSL Center (5 mi) ×");
+      }
+    });
+
+    document.getElementById("reset-filters").addEventListener("click", () => {
+      ["search", "f-category", "f-jurisdiction", "f-exemption", "f-mail", "f-pool"].forEach(id => {
+        document.getElementById(id).value = "";
+      });
+      state.near = null;
+      const nearBtn = document.getElementById("near-btn");
+      nearBtn.classList.remove("active");
+      nearBtn.textContent = "Near me (5 mi)";
+      update();
+    });
+
+    document.getElementById("sheet-close").addEventListener("click", closeSheet);
+    document.getElementById("sheet-backdrop").addEventListener("click", e => {
+      if (e.target.id === "sheet-backdrop") closeSheet();
+    });
+    document.addEventListener("keydown", e => { if (e.key === "Escape") closeSheet(); });
+
+    // Initial render
+    update();
+  </script>
+</body>
+</html>
