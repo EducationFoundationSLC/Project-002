@@ -986,7 +986,7 @@
     <div class="hero-inner">
       <div class="hero-grid">
         <div>
-          <h1>St. Lucie County<br>Property &amp; Tax Browser</h1>
+          <h1>St. Lucie County<br>Property &amp; Tax Records</h1>
           <div class="hero-cta-row">
             <a href="#browse" class="cta-split">
               <span class="cta-label">Browse Parcels</span>
@@ -999,21 +999,21 @@
                 <path d="M9 20L3 17V4L9 7M9 20L15 17M9 20V7M15 17L21 20V7L15 4M15 17V4M9 7L15 4"/>
               </svg>
             </span>
-            <span>Search public parcel valuations, 2026 millage estimates, and GIS boundaries across Port St. Lucie, Fort Pierce, and St. Lucie Village.</span>
+            <span>Look up any property in St. Lucie County. Check its 2026 millage estimate, compare the owner's mailing address, and open the parcel outline on a map.</span>
           </div>
         </div>
 
         <!-- Right Civic Data Overview Card -->
         <aside class="civic-quote-card" aria-label="About this portal">
           <div class="quote-top">
-            <span class="mono" style="font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:rgba(255,255,255,0.72);">Public Records Overview</span>
+            <span class="mono" style="font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:rgba(255,255,255,0.72);">What's In This Roll</span>
             <svg width="22" height="24" viewBox="0 0 36 38" fill="none" stroke="rgba(255,255,255,0.72)" stroke-width="1.4" aria-hidden="true">
               <path d="M9 6L12 10L18 5L24 10L27 6V12H9V6Z"/>
               <path d="M7 15H29V26C29 31.5 23.5 34.5 18 36C12.5 34.5 7 31.5 7 26V15Z"/>
             </svg>
           </div>
           <p class="quote-text">
-            Inspect appraised, assessed, and taxable values, compare mailing addresses, download GIS lot drawings, and open official TRIM PDF notices from the St. Lucie County Property Appraiser.
+            Every parcel record comes straight from the St. Lucie County Property Appraiser. Click a property to see its 2026 tax breakdown by taxing authority, download an SVG lot drawing, or pull up the county's official TRIM notice PDF.
           </p>
           <div class="quote-divider"></div>
           <div class="quote-meta">
@@ -1067,9 +1067,9 @@
   <main id="browse" class="section">
     <div class="section-head">
       <div>
-        <p class="section-kicker">Public CAMA &amp; GIS Registry</p>
+        <p class="section-kicker">St. Lucie County Tax Roll</p>
         <h2>Property Browser</h2>
-        <p>Click any parcel row or map polygon to inspect its satellite map, 2026 TRIM estimate, and GIS lot drawing.</p>
+        <p>Filter the county roll below or switch to the map. Click any row or parcel outline for the full tax bill and lot drawing.</p>
       </div>
       <div class="segmented" role="tablist" aria-label="Result view">
         <button role="tab" data-view="tax" aria-selected="true">Taxes</button>
@@ -1192,10 +1192,9 @@
   <section id="tax" class="civic-band">
     <div class="civic-inner">
       <p class="section-kicker">2026 Final Millage Rates</p>
-      <h2>Calculated line for line from official county millage tables.</h2>
+      <h2>How the tax estimate is calculated.</h2>
       <p class="sub">
-        Public PASLC records provide official appraised, assessed, exemption, and taxable values.
-        Project-002 combines them with the 2026 Final Millage Rates across all 7 county tax districts.
+        The Property Appraiser's parcel files carry assessed values and exemptions, not tax rates. We multiply each parcel's taxable value by the 2026 final millage rates for its tax district, rounding each levy to the cent the same way your TRIM notice does.
       </p>
 
       <div class="bento">
@@ -1203,15 +1202,15 @@
           <div>
             <div class="kicker">County Levies</div>
             <h3>County Taxable Value</h3>
-            <p>Applies General Fund, Fine &amp; Forfeiture, Transit, Erosion, Mosquito Control, and MSTU levies to the parcel's taxable value after exemptions.</p>
+            <p>Covers the County General Fund (4.0441 mills), Fine &amp; Forfeiture (2.7294), Transit, Erosion, Mosquito Control, and unincorporated MSTUs after all exemptions come off.</p>
           </div>
         </article>
 
         <article class="bento-card">
           <div>
-            <div class="kicker">Cities &amp; Independent Districts</div>
+            <div class="kicker">Cities &amp; Special Districts</div>
             <h3>Municipal &amp; Fire Levies</h3>
-            <p>Matches each parcel's tax district (0001, 0002, 0009, 0011, 0022, 0041, 0050) for Port St. Lucie, Fort Pierce, St. Lucie Village, Fire, SFWMD, and Children's Services.</p>
+            <p>Each parcel falls into one of 7 county tax districts (0001 through 0050). That district decides whether you pay Port St. Lucie (4.6107), Fort Pierce (6.9000), St. Lucie Village (2.0600), or county MSTUs alongside Fire (3.0000) and SFWMD.</p>
           </div>
         </article>
 
@@ -1219,17 +1218,16 @@
           <div>
             <div class="kicker">School Board</div>
             <h3>School Millage (6.2450)</h3>
-            <p>Combines School RLE (2.9970), Capital Outlay (1.5000), Discretionary (0.7480), and Voter Referendum (1.0000) levies.</p>
+            <p>Adds up the four St. Lucie County School Board levies: Required Local Effort (2.9970), Capital Outlay (1.5000), Discretionary (0.7480), and Voter Referendum (1.0000).</p>
           </div>
         </article>
 
         <article class="bento-card wide">
           <div>
-            <div class="kicker">Direct Official TRIM Access</div>
-            <h3>Every parcel links to its official TRIM notice.</h3>
+            <div class="kicker">What's Missing From GIS Alone</div>
+            <h3>Check the official TRIM PDF for non-ad valorem fees.</h3>
             <p>
-              Click any property to open its detail sheet and view its official Saint Lucie County Property Appraiser TRIM PDF directly from paslc.gov.
-              Note: Non-ad valorem assessments (such as PSL solid waste and stormwater fees) appear on the official TRIM notice and are included automatically when running with the local SQLite database.
+              The county's live GIS layer does not include non-ad valorem charges like Port St. Lucie's solid waste fee (~$482) or stormwater assessments. Every property panel links straight to the Property Appraiser's official TRIM PDF so you can verify the exact bill. Running this page against the local Project-002 SQLite database pulls in most non-ad valorem assessments automatically.
             </p>
           </div>
           <div class="millage-example">
@@ -1241,9 +1239,9 @@
 
         <article class="bento-card">
           <div>
-            <div class="kicker">Dual-Mode Architecture</div>
+            <div class="kicker">Two Ways To Run It</div>
             <h3>Local SQLite or Live GIS</h3>
-            <p>Automatically connects to your local Project-002 Python/SQLite backend when served via server.py, or queries map.paslc.gov live when opened standalone.</p>
+            <p>Serve this folder with server.py to run 100% locally off your own SQLite build of the county CSVs. Open index.html directly in a browser and it falls back to map.paslc.gov with zero setup.</p>
           </div>
         </article>
       </div>
