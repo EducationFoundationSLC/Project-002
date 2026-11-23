@@ -1,0 +1,2325 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>St. Lucie County — Civic Property Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&family=Google+Sans+Flex:wght@400..700&family=Google+Sans+Code:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <style>
+    /* Stitch Design System: Civic Heritage Navy — Light Theme */
+    :root {
+      --navy: #0b2240;
+      --navy-deep: #061529;
+      --navy-hover: #13345c;
+      --canvas: #ffffff;
+      --surface: #f4f7fa;
+      --surface-elevated: #edf2f7;
+      --surface-card: rgba(8, 25, 48, 0.80);
+      --border: #dce3ec;
+      --border-strong: #c2cedc;
+      --text: #0b2240;
+      --text-secondary: #475569;
+      --text-tertiary: #64748b;
+      --link: #0b5ed7;
+      --accent-soft: #eaf0f7;
+      --ok-bg: #eaf6ee;
+      --ok-text: #166534;
+      --warn-bg: #fef4e2;
+      --warn-text: #92400e;
+      --radius-xs: 2px;
+      --radius-sm: 4px;
+      --radius-md: 6px;
+      --max-w: 1200px;
+      --font-display: "Google Sans", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --font-body: "Google Sans Flex", "Google Sans", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: "Google Sans Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+    body {
+      margin: 0;
+      font-family: var(--font-body);
+      font-size: 14.5px;
+      line-height: 1.5;
+      color: var(--text);
+      background: var(--canvas);
+    }
+    h1, h2, h3, .brand-title, .stat-num, .millage-example strong {
+      font-family: var(--font-display);
+    }
+    .mono {
+      font-family: var(--font-mono);
+      font-size: 0.9em;
+    }
+    a { color: var(--link); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    button, input, select { font-family: inherit; font-size: inherit; color: inherit; }
+
+    /* Signature Split-Box Civic CTA (Caserta style) */
+    .cta-split {
+      display: inline-flex;
+      align-items: stretch;
+      background: #ffffff;
+      color: var(--navy-deep);
+      border-radius: var(--radius-xs);
+      overflow: hidden;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      transition: background 0.15s ease;
+      text-decoration: none;
+      border: 1px solid #ffffff;
+    }
+    .cta-split:hover { background: #eef3f9; text-decoration: none; }
+    .cta-split .cta-label {
+      padding: 10px 18px;
+      display: inline-flex;
+      align-items: center;
+    }
+    .cta-split .cta-arrow {
+      margin: 3px;
+      width: 34px;
+      background: var(--navy);
+      color: #ffffff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 1px;
+      font-size: 15px;
+      transition: background 0.15s ease;
+    }
+    .cta-split:hover .cta-arrow { background: var(--navy-deep); }
+
+    /* Navy variant of Split-Box CTA for light header */
+    .cta-split.cta-navy {
+      background: var(--navy);
+      color: #ffffff;
+      border-color: var(--navy);
+    }
+    .cta-split.cta-navy:hover { background: var(--navy-hover); border-color: var(--navy-hover); }
+    .cta-split.cta-navy .cta-arrow {
+      background: #ffffff;
+      color: var(--navy);
+    }
+
+    /* Top Civic Navigation (Light) */
+    .global-nav {
+      position: sticky;
+      top: 0;
+      z-index: 1100;
+      background: rgba(255, 255, 255, 0.90);
+      backdrop-filter: saturate(160%) blur(16px);
+      -webkit-backdrop-filter: saturate(160%) blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner {
+      max-width: var(--max-w);
+      height: 68px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--navy);
+      text-decoration: none;
+    }
+    .brand:hover { text-decoration: none; }
+    .brand-crest {
+      width: 34px;
+      height: 36px;
+      flex-shrink: 0;
+      color: var(--navy);
+    }
+    .brand-text { display: flex; flex-direction: column; }
+    .brand-title {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      line-height: 1.1;
+      color: var(--navy);
+    }
+    .brand-sub {
+      font-size: 9.5px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+      margin-top: 3px;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .nav-links a {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: color 0.15s ease;
+    }
+    .nav-links a:hover { color: var(--navy); text-decoration: none; }
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .nav-badge {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-secondary);
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      border-radius: var(--radius-xs);
+      padding: 5px 10px;
+      white-space: nowrap;
+    }
+
+    /* Full-Bleed Architectural Dusk Hero (Caserta composition) */
+    .hero {
+      position: relative;
+      background:
+        linear-gradient(180deg, rgba(6, 21, 41, 0.54) 0%, rgba(6, 21, 41, 0.36) 46%, rgba(6, 21, 41, 0.82) 100%),
+        url("hero-city-hall.jpg") center 42% / cover no-repeat;
+      background-color: var(--navy-deep);
+      padding: 96px 24px 52px;
+      color: #ffffff;
+    }
+    .hero-inner {
+      max-width: var(--max-w);
+      margin: 0 auto;
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.85fr);
+      gap: 48px;
+      align-items: end;
+    }
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(36px, 4.8vw, 56px);
+      line-height: 1.09;
+      font-weight: 600;
+      letter-spacing: -0.025em;
+      color: #ffffff;
+      text-shadow: 0 2px 24px rgba(0, 0, 0, 0.35);
+    }
+    .hero-cta-row {
+      margin-top: 30px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .hero-mission {
+      margin-top: 24px;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      max-width: 440px;
+      padding: 14px 18px;
+      background: var(--surface-card);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: var(--radius-md);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.24);
+      font-size: 13px;
+      line-height: 1.45;
+      color: rgba(255, 255, 255, 0.92);
+    }
+    .hero-mission-icon {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.36);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: #ffffff;
+    }
+
+    /* Right Translucent Navy Quote / Civic Card */
+    .civic-quote-card {
+      background: var(--surface-card);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: var(--radius-md);
+      padding: 28px 30px;
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.28);
+    }
+    .quote-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .quote-text {
+      margin: 0 0 22px;
+      font-size: 14.5px;
+      line-height: 1.6;
+      color: rgba(255, 255, 255, 0.92);
+    }
+    .quote-divider {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.18);
+      margin-bottom: 18px;
+    }
+    .quote-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .quote-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      color: #ffffff;
+      flex-shrink: 0;
+    }
+    .quote-author strong {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #ffffff;
+    }
+    .quote-author span {
+      display: block;
+      font-size: 11.5px;
+      color: rgba(255, 255, 255, 0.7);
+      margin-top: 2px;
+    }
+
+    /* Bottom Hero Stats Row */
+    .hero-stats {
+      margin-top: 56px;
+      padding-top: 28px;
+      border-top: 1px solid rgba(255, 255, 255, 0.22);
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 24px;
+    }
+    .hero-stat {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .hero-stat svg {
+      width: 28px;
+      height: 28px;
+      color: rgba(255, 255, 255, 0.9);
+      flex-shrink: 0;
+    }
+    .hero-stat .stat-num {
+      display: block;
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      font-variant-numeric: tabular-nums;
+      color: #ffffff;
+      line-height: 1.15;
+    }
+    .hero-stat .stat-label {
+      display: block;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.8);
+      margin-top: 2px;
+    }
+
+    /* Main Browser Section (Light) */
+    .section {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      padding: 64px 24px;
+    }
+    .section-head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .section-kicker {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+      margin: 0 0 6px;
+    }
+    .section-head h2 {
+      margin: 0;
+      font-size: clamp(24px, 3vw, 32px);
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--navy);
+    }
+    .section-head p {
+      margin: 6px 0 0;
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    /* Architectural Segmented Control */
+    .segmented {
+      display: inline-flex;
+      background: var(--surface);
+      padding: 3px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+    .segmented button {
+      border: 0;
+      background: transparent;
+      padding: 7px 16px;
+      border-radius: var(--radius-xs);
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    .segmented button[aria-selected="true"] {
+      background: var(--navy);
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    /* Filter Bar */
+    .controls-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 18px;
+      margin-bottom: 18px;
+    }
+    .search-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .search-wrap {
+      position: relative;
+      flex: 1 1 280px;
+    }
+    .search-wrap svg {
+      position: absolute;
+      left: 13px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 15px;
+      height: 15px;
+      color: var(--text-tertiary);
+      pointer-events: none;
+    }
+    .search-input {
+      width: 100%;
+      padding: 10px 14px 10px 36px;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-xs);
+      background: #ffffff;
+      color: var(--text);
+      font-size: 13.5px;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .search-input::placeholder { color: var(--text-tertiary); }
+    .search-input:focus {
+      border-color: var(--navy);
+      box-shadow: 0 0 0 3px rgba(11, 34, 64, 0.10);
+    }
+
+    .btn-subtle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 14px;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-xs);
+      background: #ffffff;
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--navy);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+    .btn-subtle:hover { background: var(--surface-elevated); border-color: var(--navy); text-decoration: none; }
+    .btn-subtle.active {
+      background: var(--navy);
+      color: #ffffff;
+      border-color: var(--navy);
+      font-weight: 600;
+    }
+    .btn-subtle:disabled { opacity: 0.4; cursor: default; }
+
+    .near-radius {
+      padding: 9px 10px;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-xs);
+      background: #ffffff;
+      font-size: 12.5px;
+      color: var(--text);
+    }
+
+    .filters-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .filter-field label {
+      display: block;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-secondary);
+      margin-bottom: 5px;
+    }
+    .filter-field select {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-xs);
+      background: #ffffff;
+      font-size: 13px;
+      color: var(--text);
+      cursor: pointer;
+    }
+    .filter-field select:focus { outline: none; border-color: var(--navy); }
+
+    /* Live Results Summary */
+    .results-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 6px 2px 14px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    .results-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      font-variant-numeric: tabular-nums;
+    }
+    .results-stats strong { color: var(--navy); font-weight: 600; }
+    .reset-link {
+      border: 0;
+      background: none;
+      color: var(--link);
+      font-size: 12.5px;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 0;
+    }
+    .reset-link:hover { text-decoration: underline; }
+
+    /* Table */
+    .table-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      background: #ffffff;
+    }
+    .table-scroll { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+    }
+    thead th {
+      text-align: left;
+      padding: 12px 14px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-secondary);
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+    }
+    thead th:hover, thead th.sorted { color: var(--navy); }
+    thead th.sorted::after { content: " ↓"; font-size: 11px; }
+    thead th.sorted.asc::after { content: " ↑"; }
+    tbody { transition: opacity 0.15s ease; }
+    tbody.loading { opacity: 0.45; }
+    tbody td {
+      padding: 13px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr { cursor: pointer; transition: background 0.1s ease; }
+    tbody tr:hover { background: #f8fafc; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .addr-main { font-weight: 500; color: var(--navy); }
+    .addr-sub { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
+    .owner-cell { max-width: 220px; }
+    .owner-cell > div:first-child { overflow: hidden; text-overflow: ellipsis; }
+    .tax-val { font-weight: 600; color: var(--navy); }
+
+    .pill {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: var(--radius-xs);
+      background: var(--accent-soft);
+      color: var(--text-secondary);
+      margin-right: 4px;
+    }
+    .pill.ok { background: var(--ok-bg); color: var(--ok-text); }
+    .pill.warn { background: var(--warn-bg); color: var(--warn-text); }
+
+    .empty-state {
+      padding: 56px 20px;
+      text-align: center;
+      color: var(--text-secondary);
+    }
+
+    /* Pagination */
+    .pager {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      margin-top: 18px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Map View */
+    .map-card {
+      position: relative;
+      z-index: 0;
+      isolation: isolate;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      background: var(--surface);
+    }
+    #map { height: 560px; width: 100%; }
+    .map-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 12px 16px;
+      background: #ffffff;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    .legend { display: flex; flex-wrap: wrap; gap: 14px; }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .legend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+
+    /* TRIM Methodology Band (Light Civic Slate) */
+    .civic-band {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 76px 24px;
+    }
+    .civic-inner { max-width: var(--max-w); margin: 0 auto; }
+    .civic-band h2 {
+      margin: 0;
+      font-size: clamp(26px, 3.6vw, 40px);
+      font-weight: 600;
+      letter-spacing: -0.025em;
+      line-height: 1.1;
+      max-width: 680px;
+      color: var(--navy);
+    }
+    .civic-band .sub {
+      margin: 14px 0 38px;
+      font-size: 15.5px;
+      color: var(--text-secondary);
+      max-width: 640px;
+    }
+    .bento {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .bento-card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 26px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 210px;
+    }
+    .bento-card .kicker {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 10px;
+    }
+    .bento-card h3 {
+      margin: 0 0 10px;
+      font-size: 19px;
+      font-weight: 600;
+      letter-spacing: -0.015em;
+      color: var(--navy);
+    }
+    .bento-card p {
+      margin: 0;
+      font-size: 13.5px;
+      line-height: 1.55;
+      color: var(--text-secondary);
+    }
+    .bento-card.wide { grid-column: span 2; }
+    .millage-example {
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 28px;
+      flex-wrap: wrap;
+      font-variant-numeric: tabular-nums;
+    }
+    .millage-example div span { display: block; font-size: 11.5px; color: var(--text-tertiary); }
+    .millage-example div strong { font-size: 18px; color: var(--navy); font-weight: 600; }
+
+    /* Slide-over Property Sheet (Light) */
+    .sheet-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      background: rgba(6, 21, 41, 0.42);
+      display: flex;
+      justify-content: flex-end;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .sheet-backdrop.open { opacity: 1; pointer-events: auto; }
+    .sheet {
+      width: min(580px, 100%);
+      height: 100%;
+      background: #ffffff;
+      border-left: 1px solid var(--border-strong);
+      color: var(--text);
+      overflow-y: auto;
+      padding: 24px 28px 48px;
+      transform: translateX(24px);
+      transition: transform 0.22s ease;
+      box-shadow: -12px 0 40px rgba(6, 21, 41, 0.18);
+    }
+    .sheet-backdrop.open .sheet { transform: translateX(0); }
+    .sheet-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sheet-top h3 {
+      margin: 0;
+      font-size: 21px;
+      font-weight: 600;
+      letter-spacing: -0.018em;
+      color: var(--navy);
+    }
+    .sheet-top p { margin: 4px 0 0; font-size: 13px; color: var(--text-secondary); }
+    .sheet-close {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-xs);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-secondary);
+      font-size: 18px;
+      line-height: 1;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .sheet-close:hover { background: var(--surface-elevated); color: var(--navy); }
+
+    .parcel-map {
+      position: relative;
+      z-index: 0;
+      isolation: isolate;
+      height: 240px;
+      width: 100%;
+      border-radius: var(--radius-xs);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      margin-top: 18px;
+      background: var(--surface);
+    }
+    .sheet-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .sheet-section { margin-top: 24px; }
+    .sheet-section h4 {
+      margin: 0 0 12px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-tertiary);
+    }
+    .kv-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px 18px;
+    }
+    .kv-item span { display: block; font-size: 11.5px; color: var(--text-tertiary); }
+    .kv-item strong { display: block; font-size: 13.5px; font-weight: 500; margin-top: 2px; color: var(--navy); }
+
+    .trim-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    .trim-table th, .trim-table td {
+      padding: 6px 5px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+    }
+    .trim-table th { font-size: 10.5px; color: var(--text-secondary); font-weight: 600; background: transparent; cursor: default; }
+    .trim-table tr.group-row td {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-tertiary);
+      padding-top: 10px;
+      background: transparent;
+    }
+    .trim-table tr.total-row td {
+      border-top: 1.5px solid var(--navy);
+      border-bottom: 0;
+      font-weight: 600;
+      padding-top: 10px;
+      color: var(--navy);
+    }
+
+    .lot-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xs);
+      padding: 12px;
+      text-align: center;
+    }
+    .lot-box svg { max-width: 100%; height: auto; display: block; margin: 0 auto; border-radius: 2px; }
+    .lot-actions {
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    /* Civic Directory Footer (Light) */
+    footer {
+      background: #ffffff;
+      padding: 28px 24px 36px;
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--text-secondary);
+    }
+    .footer-inner { max-width: var(--max-w); margin: 0 auto; }
+    .footer-notes {
+      padding: 10px 0 20px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-tertiary);
+    }
+    .footer-notes p { margin: 0 0 6px; }
+    .footer-notes p:last-child { margin-bottom: 0; }
+    .footer-directory {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 24px 28px;
+      padding: 28px 0;
+    }
+    .footer-col h3 {
+      margin: 0 0 10px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--navy);
+    }
+    .footer-col ul { list-style: none; margin: 0; padding: 0; }
+    .footer-col li { margin-bottom: 7px; }
+    .footer-col li:last-child { margin-bottom: 0; }
+    .footer-col a { color: var(--text-secondary); text-decoration: none; }
+    .footer-col a:hover { color: var(--navy); text-decoration: underline; }
+    .footer-callout {
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+    .footer-callout a { color: var(--link); }
+    .footer-bottom {
+      padding-top: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px 20px;
+      color: var(--text-tertiary);
+    }
+    .footer-legal-links {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .footer-legal-links a {
+      color: var(--text-secondary);
+      padding: 0 10px;
+      border-right: 1px solid var(--border-strong);
+    }
+    .footer-legal-links a:first-child { padding-left: 0; }
+    .footer-legal-links a:last-child { border-right: 0; padding-right: 0; }
+    .footer-legal-links a:hover { color: var(--navy); text-decoration: underline; }
+
+    /* Responsive */
+    @media (max-width: 960px) {
+      .hero-grid { grid-template-columns: 1fr; gap: 32px; }
+      .hero-stats { grid-template-columns: 1fr; gap: 18px; }
+      .filters-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .bento { grid-template-columns: 1fr; }
+      .bento-card.wide { grid-column: auto; }
+      .footer-directory { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 640px) {
+      .nav-links, .nav-badge { display: none; }
+      .hero { padding: 56px 18px 40px; }
+      .filters-grid { grid-template-columns: 1fr; }
+      .kv-grid { grid-template-columns: 1fr; }
+      .sheet { padding: 20px 18px 40px; }
+      .footer-directory { grid-template-columns: 1fr; gap: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Civic Navigation -->
+  <nav class="global-nav" aria-label="Primary">
+    <div class="nav-inner">
+      <a href="#top" class="brand">
+        <!-- Minimal Architectural Crest -->
+        <svg class="brand-crest" viewBox="0 0 36 38" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <path d="M9 6L12 10L18 5L24 10L27 6V12H9V6Z"/>
+          <path d="M7 15H29V26C29 31.5 23.5 34.5 18 36C12.5 34.5 7 31.5 7 26V15Z"/>
+          <path d="M13 33V23C13 20.2 15.2 18 18 18C20.8 18 23 20.2 23 23V33"/>
+          <line x1="7" y1="21" x2="29" y2="21"/>
+        </svg>
+        <div class="brand-text">
+          <span class="brand-title">St. Lucie</span>
+          <span class="brand-sub">County Property Portal</span>
+        </div>
+      </a>
+
+      <ul class="nav-links">
+        <li><a href="#top">Overview</a></li>
+        <li><a href="#browse">Parcels</a></li>
+        <li><a href="#tax">2026 TRIM Rates</a></li>
+        <li><a href="#directory">County Directory</a></li>
+      </ul>
+
+      <div class="nav-right">
+        <span class="nav-badge" id="data-source-badge">Live PASLC GIS</span>
+        <a href="#browse" class="cta-split cta-navy">
+          <span class="cta-label">Explore Parcels</span>
+          <span class="cta-arrow" aria-hidden="true">&#8599;</span>
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Full-Bleed Architectural Dusk Hero -->
+  <header id="top" class="hero">
+    <div class="hero-inner">
+      <div class="hero-grid">
+        <div>
+          <h1>St. Lucie County<br>Property &amp; Tax Records</h1>
+          <div class="hero-cta-row">
+            <a href="#browse" class="cta-split">
+              <span class="cta-label">Browse Parcels</span>
+              <span class="cta-arrow" aria-hidden="true">&#8599;</span>
+            </a>
+          </div>
+          <div class="hero-mission">
+            <span class="hero-mission-icon" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                <path d="M9 20L3 17V4L9 7M9 20L15 17M9 20V7M15 17L21 20V7L15 4M15 17V4M9 7L15 4"/>
+              </svg>
+            </span>
+            <span>Look up any property in St. Lucie County. Check its 2026 millage estimate, compare the owner's mailing address, and open the parcel outline on a map.</span>
+          </div>
+        </div>
+
+        <!-- Right Civic Data Overview Card -->
+        <aside class="civic-quote-card" aria-label="About this portal">
+          <div class="quote-top">
+            <span class="mono" style="font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:rgba(255,255,255,0.72);">What's In This Roll</span>
+            <svg width="22" height="24" viewBox="0 0 36 38" fill="none" stroke="rgba(255,255,255,0.72)" stroke-width="1.4" aria-hidden="true">
+              <path d="M9 6L12 10L18 5L24 10L27 6V12H9V6Z"/>
+              <path d="M7 15H29V26C29 31.5 23.5 34.5 18 36C12.5 34.5 7 31.5 7 26V15Z"/>
+            </svg>
+          </div>
+          <p class="quote-text">
+            Every parcel record comes straight from the St. Lucie County Property Appraiser. Click a property to see its 2026 tax breakdown by taxing authority, download an SVG lot drawing, or pull up the county's official TRIM notice PDF.
+          </p>
+          <div class="quote-divider"></div>
+          <div class="quote-meta">
+            <span class="quote-avatar" aria-hidden="true">02</span>
+            <div class="quote-author">
+              <strong>Education Foundation of St. Lucie County</strong>
+              <span>Open Source &middot; Project-002</span>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <!-- Bottom Hero Stats Row -->
+      <div class="hero-stats" aria-label="County dataset summary">
+        <div class="hero-stat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+            <path d="M3 10.5L12 4L21 10.5V20H3V10.5Z"/>
+            <path d="M9 20V13H15V20"/>
+          </svg>
+          <div>
+            <span class="stat-num" id="hero-count">195,060</span>
+            <span class="stat-label">County Parcels Indexed</span>
+          </div>
+        </div>
+
+        <div class="hero-stat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+            <path d="M3 20H21M5 20V9M10 20V9M14 20V9M19 20V9M3 9L12 4L21 9H3Z"/>
+          </svg>
+          <div>
+            <span class="stat-num">2026 TRIM</span>
+            <span class="stat-label">Final Millage Rates (23 Levies)</span>
+          </div>
+        </div>
+
+        <div class="hero-stat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+            <path d="M12 21C12 21 5 14.5 5 9.5C5 5.9 8.1 3 12 3C15.9 3 19 5.9 19 9.5C19 14.5 12 21 12 21Z"/>
+            <circle cx="12" cy="9.5" r="2.5"/>
+          </svg>
+          <div>
+            <span class="stat-num">4 Jurisdictions</span>
+            <span class="stat-label">Port St. Lucie, Fort Pierce, Village &amp; County</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Interactive Property Browser -->
+  <main id="browse" class="section">
+    <div class="section-head">
+      <div>
+        <p class="section-kicker">St. Lucie County Tax Roll</p>
+        <h2>Property Browser</h2>
+        <p>Filter the county roll below or switch to the map. Click any row or parcel outline for the full tax bill and lot drawing.</p>
+      </div>
+      <div class="segmented" role="tablist" aria-label="Result view">
+        <button role="tab" data-view="tax" aria-selected="true">Taxes</button>
+        <button role="tab" data-view="property" aria-selected="false">Property</button>
+        <button role="tab" data-view="map" aria-selected="false">Map</button>
+      </div>
+    </div>
+
+    <!-- Search & Filters -->
+    <section class="controls-card" aria-label="Search and filters">
+      <div class="search-row">
+        <div class="search-wrap">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <circle cx="9" cy="9" r="6"></circle>
+            <path d="M13.5 13.5L17.5 17.5" stroke-linecap="round"></path>
+          </svg>
+          <input id="search" class="search-input" type="search" placeholder="Search address, owner, parcel ID, subdivision, or ZIP">
+        </div>
+        <button id="near-btn" class="btn-subtle" type="button" title="Filter properties near your location (or Port St. Lucie City Hall)">
+          Near me
+        </button>
+        <select id="near-radius" class="near-radius" hidden aria-label="Search radius">
+          <option value="0.25">¼ mi</option>
+          <option value="0.5" selected>½ mi</option>
+          <option value="1">1 mi</option>
+          <option value="2">2 mi</option>
+          <option value="5">5 mi</option>
+        </select>
+      </div>
+
+      <div class="filters-grid">
+        <div class="filter-field">
+          <label for="f-category">Property Type</label>
+          <select id="f-category">
+            <option value="">All types</option>
+            <option value="Residential">Residential</option>
+            <option value="Commercial">Commercial</option>
+            <option value="Industrial">Industrial</option>
+            <option value="Agricultural">Agricultural</option>
+            <option value="Institutional">Institutional</option>
+            <option value="Government">Government</option>
+            <option value="Miscellaneous">Miscellaneous</option>
+          </select>
+        </div>
+
+        <div class="filter-field">
+          <label for="f-jurisdiction">Jurisdiction</label>
+          <select id="f-jurisdiction">
+            <option value="">All jurisdictions</option>
+            <option value="Port Saint Lucie">Port Saint Lucie</option>
+            <option value="Fort Pierce">Fort Pierce</option>
+            <option value="Saint Lucie Village">Saint Lucie Village</option>
+            <option value="Saint Lucie County">Unincorporated County</option>
+          </select>
+        </div>
+
+        <div class="filter-field">
+          <label for="f-exempt">Exemptions</label>
+          <select id="f-exempt">
+            <option value="">Any</option>
+            <option value="1">Has exemptions</option>
+            <option value="0">No exemptions</option>
+          </select>
+        </div>
+
+        <div class="filter-field">
+          <label for="f-improved">Improved / Vacant</label>
+          <select id="f-improved">
+            <option value="">All parcels</option>
+            <option value="Improved">Improved (has buildings)</option>
+            <option value="Vacant">Vacant land</option>
+          </select>
+        </div>
+
+        <div class="filter-field">
+          <label for="f-state">Owner Location</label>
+          <select id="f-state">
+            <option value="">Any owner</option>
+            <option value="fl">Florida mailing address</option>
+            <option value="oos">Out-of-state owner</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <!-- Live Results Summary -->
+    <div class="results-bar">
+      <div class="results-stats" id="results-stats" aria-live="polite">Loading live parcels…</div>
+      <button id="reset-filters" class="reset-link" type="button">Reset filters</button>
+    </div>
+
+    <!-- Table View -->
+    <div id="table-view" class="table-card">
+      <div class="table-scroll">
+        <table>
+          <thead id="table-head"></thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pager" id="pager">
+      <button id="prev-page" class="btn-subtle" type="button" disabled>&lsaquo; Prev</button>
+      <span id="page-info">Page 1</span>
+      <button id="next-page" class="btn-subtle" type="button" disabled>Next &rsaquo;</button>
+    </div>
+
+    <!-- Map View -->
+    <div id="map-view" class="map-card" hidden>
+      <div id="map"></div>
+      <div class="map-footer">
+        <div class="legend" id="map-legend"></div>
+        <span id="map-status">Zoom in to view parcel outlines</span>
+      </div>
+    </div>
+  </main>
+
+  <!-- TRIM Tax Methodology Band -->
+  <section id="tax" class="civic-band">
+    <div class="civic-inner">
+      <p class="section-kicker">2026 Final Millage Rates</p>
+      <h2>How the tax estimate is calculated.</h2>
+      <p class="sub">
+        The Property Appraiser's parcel files carry assessed values and exemptions, not tax rates. We multiply each parcel's taxable value by the 2026 final millage rates for its tax district, rounding each levy to the cent the same way your TRIM notice does.
+      </p>
+
+      <div class="bento">
+        <article class="bento-card">
+          <div>
+            <div class="kicker">County Levies</div>
+            <h3>County Taxable Value</h3>
+            <p>Covers the County General Fund (4.0441 mills), Fine &amp; Forfeiture (2.7294), Transit, Erosion, Mosquito Control, and unincorporated MSTUs after all exemptions come off.</p>
+          </div>
+        </article>
+
+        <article class="bento-card">
+          <div>
+            <div class="kicker">Cities &amp; Special Districts</div>
+            <h3>Municipal &amp; Fire Levies</h3>
+            <p>Each parcel falls into one of 7 county tax districts (0001 through 0050). That district decides whether you pay Port St. Lucie (4.6107), Fort Pierce (6.9000), St. Lucie Village (2.0600), or county MSTUs alongside Fire (3.0000) and SFWMD.</p>
+          </div>
+        </article>
+
+        <article class="bento-card">
+          <div>
+            <div class="kicker">School Board</div>
+            <h3>School Millage (6.2450)</h3>
+            <p>Adds up the four St. Lucie County School Board levies: Required Local Effort (2.9970), Capital Outlay (1.5000), Discretionary (0.7480), and Voter Referendum (1.0000).</p>
+          </div>
+        </article>
+
+        <article class="bento-card wide">
+          <div>
+            <div class="kicker">What's Missing From GIS Alone</div>
+            <h3>Check the official TRIM PDF for non-ad valorem fees.</h3>
+            <p>
+              The county's live GIS layer does not include non-ad valorem charges like Port St. Lucie's solid waste fee (~$482) or stormwater assessments. Every property panel links straight to the Property Appraiser's official TRIM PDF so you can verify the exact bill. Running this page against the local Project-002 SQLite database pulls in most non-ad valorem assessments automatically.
+            </p>
+          </div>
+          <div class="millage-example">
+            <div><span>Port St. Lucie (0011)</span><strong>22.1422 mills</strong></div>
+            <div><span>Fort Pierce (0022)</span><strong>24.1672 mills</strong></div>
+            <div><span>St. Lucie Village (0009)</span><strong>19.3272 mills</strong></div>
+          </div>
+        </article>
+
+        <article class="bento-card">
+          <div>
+            <div class="kicker">Two Ways To Run It</div>
+            <h3>Local SQLite or Live GIS</h3>
+            <p>Serve this folder with server.py to run 100% locally off your own SQLite build of the county CSVs. Open index.html directly in a browser and it falls back to map.paslc.gov with zero setup.</p>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Civic Directory Footer -->
+  <footer id="directory">
+    <div class="footer-inner">
+      <div class="footer-notes">
+        <p>1. Parcel attributes and polygon boundaries are sourced from the Saint Lucie County Property Appraiser public GIS service (map.paslc.gov) or your local Project-002 SQLite database.</p>
+        <p>2. Ad valorem tax estimates use the 2026 Final Millage Rates from Project-002's tax_rates.csv. Official tax bills and non-ad valorem assessments are published by the Property Appraiser and Tax Collector.</p>
+        <p>3. Lot drawings are measured from county GIS parcel boundaries and are for reference only, not a legal survey.</p>
+      </div>
+
+      <nav class="footer-directory" aria-label="Footer directory">
+        <div class="footer-col">
+          <h3>Property &amp; Tax</h3>
+          <ul>
+            <li><a href="https://www.paslc.gov/" target="_blank" rel="noopener">St. Lucie Property Appraiser</a></li>
+            <li><a href="https://www.paslc.gov/231/Data-Requests" target="_blank" rel="noopener">PASLC Data Requests</a></li>
+            <li><a href="https://www.tcslc.com/" target="_blank" rel="noopener">St. Lucie Tax Collector</a></li>
+            <li><a href="#tax">2026 TRIM &amp; Millage Rates</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h3>County &amp; Municipalities</h3>
+          <ul>
+            <li><a href="https://www.stlucieco.gov/" target="_blank" rel="noopener">St. Lucie County Government</a></li>
+            <li><a href="https://gis.stlucieco.gov/hub/" target="_blank" rel="noopener">St. Lucie GIS Open Data Hub</a></li>
+            <li><a href="https://www.cityofpsl.com/" target="_blank" rel="noopener">City of Port St. Lucie</a></li>
+            <li><a href="https://www.cityoffortpierce.com/" target="_blank" rel="noopener">City of Fort Pierce</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h3>Education Foundation</h3>
+          <ul>
+            <li><a href="https://www.educationfoundationstlucie.org/" target="_blank" rel="noopener">Education Foundation of St. Lucie County</a></li>
+            <li><a href="https://github.com/EducationFoundationSLC" target="_blank" rel="noopener">EducationFoundationSLC GitHub</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h3>Project-002</h3>
+          <ul>
+            <li><a href="https://github.com/EducationFoundationSLC/Project-002" target="_blank" rel="noopener">Source Code on GitHub</a></li>
+            <li><a href="#top">Overview</a></li>
+            <li><a href="#browse">Property Browser</a></li>
+            <li><a href="#tax">Tax Methodology</a></li>
+          </ul>
+        </div>
+      </nav>
+
+      <div class="footer-callout">
+        Public parcel data provided by the <a href="https://www.paslc.gov/" target="_blank" rel="noopener">Saint Lucie County Property Appraiser</a>.
+        Explore or contribute on <a href="https://github.com/EducationFoundationSLC/Project-002" target="_blank" rel="noopener">GitHub</a>.
+      </div>
+
+      <div class="footer-bottom">
+        <span>Project-002 &middot; Education Foundation of St. Lucie County</span>
+        <div class="footer-legal-links">
+          <a href="https://www.educationfoundationstlucie.org/" target="_blank" rel="noopener">Education Foundation</a>
+          <a href="https://github.com/EducationFoundationSLC/Project-002" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://www.paslc.gov/" target="_blank" rel="noopener">PASLC</a>
+          <a href="https://www.stlucieco.gov/" target="_blank" rel="noopener">St. Lucie County</a>
+        </div>
+        <span>St. Lucie County, FL</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Property Detail Slide-Over Sheet -->
+  <div id="sheet-backdrop" class="sheet-backdrop" aria-hidden="true">
+    <aside class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+      <div class="sheet-top">
+        <div>
+          <h3 id="sheet-title"></h3>
+          <p id="sheet-subtitle"></p>
+        </div>
+        <button id="sheet-close" class="sheet-close" type="button" aria-label="Close">&times;</button>
+      </div>
+      <div id="sheet-body"></div>
+    </aside>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script>
+    const PASLC_PARCELS_URL = "https://map.paslc.gov/arcgis/rest/services/GISPublic/TaxMap/MapServer/9/query";
+    const TRIM_URL = "https://api.paslc.gov/TrimPrint/api/pdf/INLINE/";
+    const SHAPES_MIN_ZOOM = 16;
+    const MAP_MAX_FEATURES = 1500;
+    const PAGE_SIZE = 50;
+    const FEET_PER_DEG_LAT = 364320;
+
+    const LIST_FIELDS = [
+      "PropertyID", "ParcelID", "SiteAddress", "SiteCity", "SiteZIP",
+      "LandUseCode", "LandUseCodeDescription", "ImprovedStatus", "DistrictGroup",
+      "Owner1", "Owner2", "MailAddress1", "MailCity", "MailState", "MailZipCode",
+      "YearBuilt", "Beds", "Baths", "TotalArea",
+      "TotalAppraisedValue", "TotalAssessedValue", "TotalExemptionValue", "TotalTaxableValue",
+      "SaleDate", "SalePrice", "XCoordinate", "YCoordinate"
+    ].join(",");
+
+    const CATEGORY_COLORS = {
+      Residential: "#0b5ed7",
+      Commercial: "#c2410c",
+      Industrial: "#7e22ce",
+      Agricultural: "#15803d",
+      Institutional: "#be185d",
+      Government: "#475569",
+      Miscellaneous: "#64748b"
+    };
+
+    const TAX_RATES_2026 = [
+      { code: "FP22", authority: "City of Fort Pierce", basis: "other", rate: 6.9000, districts: ["0022"] },
+      { code: "PS25", authority: "City of Port Saint Lucie", basis: "other", rate: 4.6107, districts: ["0011", "0041"] },
+      { code: "VL09", authority: "Village of Saint Lucie", basis: "other", rate: 2.0600, districts: ["0009"] },
+      { code: "GF01", authority: "County General Fund", basis: "county", rate: 4.0441, districts: ["0001", "0002", "0050", "0009", "0011", "0022", "0041"] },
+      { code: "GF02", authority: "Community Dev. MSTU", basis: "county", rate: 0.5000, districts: ["0001", "0002", "0050"] },
+      { code: "GF03", authority: "Law Enforcement MSTU", basis: "county", rate: 0.8403, districts: ["0001", "0002", "0050"] },
+      { code: "CD01", authority: "SLC Stormwater Management", basis: "county", rate: 0.4731, districts: ["0001", "0002", "0050"] },
+      { code: "FF02", authority: "Co Fine & Forfeiture (Jail)", basis: "county", rate: 2.7294, districts: ["0001", "0002", "0050", "0009", "0011", "0022", "0041"] },
+      { code: "SR08", authority: "School (RLE)", basis: "school", rate: 2.9970, districts: ["0001", "0002", "0050", "0009", "0011", "0022", "0041"] },
+      { code: "SN39", authority: "School (Capital Outlay)", basis: "school", rate: 1.5000, districts: ["0001", "0002", "0050", "0009", "0011", "0022", "0041"] },
+      { code: "SD09", authority: "School (Discretionary)", basis: "school", rate: 0.7480, districts: ["0001", "0002", "0050", "0009", "0011", "0022", "0041"] },
+      { code: "SR09", authority: "School (Voter Referendum)", basis: "school", rate: 1.0000, districts: ["0001", "0002", "0050", "0009", "0011", "0022", "0041"] },
+      { code: "FD21", authority: "Fire District", basis: "other", rate: 3.0000, districts: ["0001", "0002", "0050", "0009", "0011", "0022", "0041"] },
+      { code: "FI40", authority: "Florida Inland Navigation Dist.", basis: "other", rate: 0.0270, districts: ["0001", "0002", "0050", "0009", "0011", "0022", "0041"] },
+      { code: "WD12", authority: "SFWMD", basis: "other", rate: 0.0948, districts: ["0001", "0002", "0050", "0009", "0011", "0022", "0041"] },
+      { code: "WB11", authority: "SFWMD Okee Basin", basis: "other", rate: 0.1026, districts: ["0001", "0002", "0050", "0009", "0011", "0022", "0041"] },
+      { code: "WE11", authority: "SFWMD Everglades Constr.", basis: "other", rate: 0.0327, districts: ["0001", "0002", "0050", "0009", "0011", "0022", "0041"] },
+      { code: "MC14", authority: "Mosquito Control", basis: "county", rate: 0.1352, districts: ["0002", "0050", "0009", "0011", "0022"] },
+      { code: "EE19", authority: "Erosion District E", basis: "county", rate: 0.1000, districts: ["0001", "0002", "0050", "0009", "0011", "0022", "0041"] },
+      { code: "CS64", authority: "Children's Services Council", basis: "other", rate: 0.3685, districts: ["0001", "0002", "0050", "0009", "0011", "0022", "0041"] },
+      { code: "CT06", authority: "County Public Transit MSTU", basis: "county", rate: 0.2500, districts: ["0001", "0002", "0050", "0009", "0011", "0022", "0041"] },
+      { code: "PS26", authority: "PSL Voted Debt", basis: "other", rate: 0.2643, districts: ["0011", "0041"] },
+      { code: "EC01", authority: "SHI Erosion Control MSTU", basis: "county", rate: 0.5200, districts: ["0050"] }
+    ];
+
+    const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const fmtUSD = n => (n == null || isNaN(n)) ? "—" : "$" + Math.round(n).toLocaleString("en-US");
+    const fmtUSD2 = n => (n == null || isNaN(n)) ? "—" : "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const fmtDate = ms => {
+      if (!ms) return "—";
+      const d = new Date(ms);
+      return isNaN(d.getTime()) ? "—" : d.toISOString().slice(0, 10);
+    };
+
+    function categoryFromCode(code) {
+      const n = parseInt(String(code || "").slice(0, 2), 10);
+      if (isNaN(n)) return "Miscellaneous";
+      if (n < 10) return "Residential";
+      if (n < 40) return "Commercial";
+      if (n < 50) return "Industrial";
+      if (n < 70) return "Agricultural";
+      if (n < 80) return "Institutional";
+      if (n < 90) return "Government";
+      return "Miscellaneous";
+    }
+
+    function mailStatus(a) {
+      const mail1 = (a.MailAddress1 || "").trim().toUpperCase();
+      const site = (a.SiteAddress || "").trim().toUpperCase();
+      if (!mail1) return "unknown";
+      if (/\bP\.?\s*O\.?\s*BOX\b/.test(mail1)) return "po_box";
+      const mNum = mail1.match(/^\d+/);
+      const sNum = site.match(/^\d+/);
+      if (mNum && sNum && mNum[0] === sNum[0] && (a.MailZipCode || "").slice(0, 5) === (a.SiteZIP || "").slice(0, 5)) return "same";
+      if (!sNum) return "unknown";
+      return "different";
+    }
+
+    function estimateTax(district, taxable) {
+      const dist = String(district || "").trim();
+      const val = Number(taxable || 0);
+      const levies = TAX_RATES_2026.filter(l => l.districts.includes(dist));
+      if (!levies.length) return { total: null, mills: 0, lines: [] };
+      let total = 0, mills = 0;
+      const lines = levies.map(l => {
+        const tax = Math.round((val * l.rate / 1000) * 100) / 100;
+        total = Math.round((total + tax) * 100) / 100;
+        mills += l.rate;
+        return { ...l, taxable: val, tax };
+      });
+      return { total, mills, lines };
+    }
+
+    async function queryPaslc(params, signal) {
+      const body = new URLSearchParams({ f: "json", ...params });
+      const res = await fetch(PASLC_PARCELS_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: body.toString(),
+        signal
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error.message || "ArcGIS query error");
+      return data;
+    }
+
+    let dataMode = "paslc";
+    const LOCAL_SORT_MAP = {
+      SiteAddress: "address", Owner1: "owner", TotalAppraisedValue: "just_value",
+      TotalAssessedValue: "assessed_value", TotalExemptionValue: "exemption_value",
+      TotalTaxableValue: "est_tax", LandUseCodeDescription: "land_use_desc",
+      YearBuilt: "year_built", Beds: "bedrooms", TotalArea: "acres", SalePrice: "last_sale_price"
+    };
+
+    const state = { view: "tax", page: 1, total: 0, sortBy: "TotalAppraisedValue", sortDir: "DESC", near: null };
+
+    function buildLocalParams() {
+      const p = new URLSearchParams();
+      const q = document.getElementById("search").value.trim();
+      if (q) p.set("q", q);
+      const cat = document.getElementById("f-category").value;
+      if (cat) p.set("category", cat);
+      const jur = document.getElementById("f-jurisdiction").value;
+      if (jur) p.set("jurisdiction", jur);
+      const ex = document.getElementById("f-exempt").value;
+      if (ex) p.set("exempt", ex);
+      const imp = document.getElementById("f-improved").value;
+      if (imp === "Improved") p.set("improved", "1");
+      else if (imp === "Vacant") p.set("improved", "0");
+      const st = document.getElementById("f-state").value;
+      if (st === "oos") p.set("out_of_state", "1");
+      else if (st === "fl") p.set("out_of_state", "0");
+      if (state.near) {
+        p.set("near", `${state.near.lat.toFixed(5)},${state.near.lon.toFixed(5)}`);
+        p.set("radius", String(state.near.radius));
+      }
+      return p;
+    }
+
+    function normalizeLocalRow(r) {
+      return {
+        attributes: {
+          PropertyID: r.property_id, ParcelID: r.parcel_id,
+          SiteAddress: r.address + (r.unit ? ` #${r.unit}` : ""),
+          SiteCity: r.jurisdiction, SiteZIP: r.zip,
+          LandUseCode: "", LandUseCodeDescription: r.land_use_desc, _category: r.category,
+          Owner1: r.owner, Owner2: r.owner2, _mailStatus: r.mail_status,
+          YearBuilt: r.year_built, Beds: r.bedrooms,
+          Baths: r.full_baths ? (r.full_baths + (r.half_baths ? 0.5 : 0)) : 0,
+          TotalArea: r.acres ? r.acres * 43560 : 0,
+          TotalAppraisedValue: r.just_value, TotalAssessedValue: r.assessed_value,
+          TotalExemptionValue: r.exemption_value, TotalTaxableValue: r.taxable_value,
+          _estTax: r.est_tax, SaleDate: r.last_sale_date, SalePrice: r.last_sale_price,
+          XCoordinate: r.lon, YCoordinate: r.lat
+        }
+      };
+    }
+
+    function buildWhere() {
+      const clauses = [];
+      const rawQ = document.getElementById("search").value.trim();
+      if (rawQ) {
+        const parts = rawQ.split(",").map(s => s.trim()).filter(Boolean);
+        for (const part of parts) {
+          const q = part.toUpperCase().replace(/'/g, "''");
+          const altCity = q.replace(/\bST\.?\s+LUCIE\b/g, "SAINT LUCIE");
+          const cityClause = altCity !== q ? ` OR UPPER(SiteCity) LIKE '%${altCity}%'` : "";
+          clauses.push(`(UPPER(SiteAddress) LIKE '%${q}%' OR UPPER(SiteCity) LIKE '%${q}%'${cityClause} OR UPPER(Owner1) LIKE '%${q}%' OR UPPER(Owner2) LIKE '%${q}%' OR UPPER(ParcelID) LIKE '%${q}%' OR UPPER(SubdivisionDescription) LIKE '%${q}%' OR SiteZIP LIKE '${q}%')`);
+        }
+      }
+      const cat = document.getElementById("f-category").value;
+      if (cat === "Residential") clauses.push("LandUseCode < '1000'");
+      else if (cat === "Commercial") clauses.push("LandUseCode >= '1000' AND LandUseCode < '4000'");
+      else if (cat === "Industrial") clauses.push("LandUseCode >= '4000' AND LandUseCode < '5000'");
+      else if (cat === "Agricultural") clauses.push("LandUseCode >= '5000' AND LandUseCode < '7000'");
+      else if (cat === "Institutional") clauses.push("LandUseCode >= '7000' AND LandUseCode < '8000'");
+      else if (cat === "Government") clauses.push("LandUseCode >= '8000' AND LandUseCode < '9000'");
+      else if (cat === "Miscellaneous") clauses.push("LandUseCode >= '9000'");
+
+      const jur = document.getElementById("f-jurisdiction").value;
+      if (jur) clauses.push(`SiteCity = '${jur.replace(/'/g, "''")}'`);
+      const ex = document.getElementById("f-exempt").value;
+      if (ex === "1") clauses.push("TotalExemptionValue > 0");
+      else if (ex === "0") clauses.push("(TotalExemptionValue = 0 OR TotalExemptionValue IS NULL)");
+      const imp = document.getElementById("f-improved").value;
+      if (imp) clauses.push(`ImprovedStatus = '${imp}'`);
+      const st = document.getElementById("f-state").value;
+      if (st === "fl") clauses.push("MailState = 'FL'");
+      else if (st === "oos") clauses.push("MailState IS NOT NULL AND MailState <> '' AND MailState <> 'FL'");
+
+      return clauses.length ? clauses.join(" AND ") : "1=1";
+    }
+
+    function nearSpatialParams() {
+      if (!state.near) return {};
+      const { lat, lon, radius } = state.near;
+      const dLat = radius / 69.0;
+      const dLon = radius / (69.0 * Math.cos(lat * Math.PI / 180));
+      return {
+        geometry: `${(lon - dLon).toFixed(6)},${(lat - dLat).toFixed(6)},${(lon + dLon).toFixed(6)},${(lat + dLat).toFixed(6)}`,
+        geometryType: "esriGeometryEnvelope", inSR: "4326", spatialRel: "esriSpatialRelIntersects"
+      };
+    }
+
+    const COLUMNS = {
+      tax: [
+        { key: "SiteAddress", label: "Property" },
+        { key: "Owner1", label: "Owner & Mail" },
+        { key: "TotalAppraisedValue", label: "Just Value", num: true },
+        { key: "TotalAssessedValue", label: "Assessed", num: true },
+        { key: "TotalExemptionValue", label: "Exemptions", num: true },
+        { key: "TotalTaxableValue", label: "Est. 2026 Tax", num: true }
+      ],
+      property: [
+        { key: "SiteAddress", label: "Property" },
+        { key: "LandUseCodeDescription", label: "Use" },
+        { key: "YearBuilt", label: "Built", num: true },
+        { key: "Beds", label: "Bd / Ba", num: true },
+        { key: "TotalArea", label: "Lot Acres", num: true },
+        { key: "SalePrice", label: "Last Sale", num: true }
+      ]
+    };
+
+    function renderHead() {
+      const cols = COLUMNS[state.view === "map" ? "tax" : state.view];
+      document.getElementById("table-head").innerHTML = "<tr>" + cols.map(c => {
+        const sorted = state.sortBy === c.key ? ` sorted ${state.sortDir.toLowerCase()}` : "";
+        return `<th data-key="${c.key}" class="${c.num ? " num" : ""}${sorted}">${c.label}</th>`;
+      }).join("") + "</tr>";
+    }
+
+    function renderRows(features) {
+      const tbody = document.getElementById("table-body");
+      tbody.classList.remove("loading");
+      const cols = COLUMNS[state.view === "map" ? "tax" : state.view];
+      if (!features.length) {
+        tbody.innerHTML = `<tr><td colspan="${cols.length}" class="empty-state">No parcels match these filters.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = features.map(f => {
+        const a = f.attributes;
+        const cat = a._category || categoryFromCode(a.LandUseCode);
+        const addr = (a.SiteAddress || "").trim() || "(No street address)";
+        const city = a.SiteCity === "Saint Lucie County" ? "Unincorporated" : (a.SiteCity || "");
+        if (state.view === "property") {
+          const acres = a.TotalArea ? (a.TotalArea / 43560).toFixed(2) : "—";
+          const bdba = a.Beds ? `${a.Beds} / ${a.Baths ?? 0}` : "—";
+          const saleDateStr = typeof a.SaleDate === "string" ? a.SaleDate : fmtDate(a.SaleDate);
+          return `<tr data-id="${a.PropertyID}">
+            <td><div class="addr-main">${esc(addr)}</div><div class="addr-sub">${esc(city)} ${esc(a.SiteZIP || "")} &middot; <span class="mono">${esc(a.ParcelID)}</span></div></td>
+            <td><div>${esc(a.LandUseCodeDescription || cat)}</div><div class="addr-sub">${esc(cat)}</div></td>
+            <td class="num">${a.YearBuilt || "—"}</td>
+            <td class="num">${esc(bdba)}</td>
+            <td class="num">${acres}</td>
+            <td class="num">${a.SalePrice ? fmtUSD(a.SalePrice) : "—"}<div class="addr-sub">${esc(saleDateStr)}</div></td>
+          </tr>`;
+        }
+        const ms = a._mailStatus || mailStatus(a);
+        const mailPill = ms === "po_box" ? `<span class="pill warn">PO Box</span>`
+          : ms === "different" ? `<span class="pill warn">Mail elsewhere</span>`
+          : (a.MailState && a.MailState !== "FL") ? `<span class="pill warn">${esc(a.MailState)}</span>` : "";
+        const estTotal = a._estTax != null ? a._estTax : estimateTax(a.DistrictGroup, a.TotalTaxableValue).total;
+        const exVal = Number(a.TotalExemptionValue || 0);
+        return `<tr data-id="${a.PropertyID}">
+          <td><div class="addr-main">${esc(addr)}</div><div class="addr-sub">${esc(city)} ${esc(a.SiteZIP || "")} &middot; ${esc(cat)}</div></td>
+          <td class="owner-cell" title="${esc([a.Owner1, a.Owner2].filter(Boolean).join(" / "))}">
+            <div>${esc(a.Owner1 || "—")}</div>
+            <div class="addr-sub">${mailPill || esc(a.MailCity ? `${a.MailCity}, ${a.MailState || ""}` : "")}</div>
+          </td>
+          <td class="num">${fmtUSD(a.TotalAppraisedValue)}</td>
+          <td class="num">${fmtUSD(a.TotalAssessedValue)}</td>
+          <td class="num">${exVal > 0 ? `<span class="pill ok">−${fmtUSD(exVal)}</span>` : "—"}</td>
+          <td class="num tax-val">${estTotal != null ? fmtUSD2(estTotal) : "—"}<div class="addr-sub">Taxable ${fmtUSD(a.TotalTaxableValue)}</div></td>
+        </tr>`;
+      }).join("");
+    }
+
+    let listAbort = null;
+    async function loadTable() {
+      renderHead();
+      const tbody = document.getElementById("table-body");
+      tbody.classList.add("loading");
+      listAbort?.abort();
+      listAbort = new AbortController();
+
+      const where = buildWhere();
+      const spatial = nearSpatialParams();
+      const statsEl = document.getElementById("results-stats");
+
+      try {
+        if (dataMode === "local") {
+          const params = buildLocalParams();
+          params.set("page", String(state.page));
+          params.set("size", String(PAGE_SIZE));
+          params.set("sort", LOCAL_SORT_MAP[state.sortBy] || "just_value");
+          params.set("dir", state.sortDir.toLowerCase());
+          const res = await fetch("/api/properties?" + params.toString(), { signal: listAbort.signal });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          state.total = data.total || 0;
+          const features = (data.rows || []).map(normalizeLocalRow);
+          renderRows(features);
+          const s = data.summary || {};
+          statsEl.innerHTML = `
+            <span><strong>${state.total.toLocaleString()}</strong> matching parcel${state.total === 1 ? "" : "s"}</span>
+            <span>Total just value <strong>${fmtUSD(s.just)}</strong></span>
+            <span>Total taxable <strong>${fmtUSD(s.taxable)}</strong></span>
+            <span>Total est. tax / yr <strong>${fmtUSD(s.tax)}</strong></span>
+          `;
+        } else {
+          const [countRes, pageRes] = await Promise.all([
+            queryPaslc({ where, returnCountOnly: "true", ...spatial }, listAbort.signal),
+            queryPaslc({
+              where, outFields: LIST_FIELDS,
+              orderByFields: `${state.sortBy} ${state.sortDir}`,
+              resultOffset: String((state.page - 1) * PAGE_SIZE),
+              resultRecordCount: String(PAGE_SIZE),
+              returnGeometry: "false", ...spatial
+            }, listAbort.signal)
+          ]);
+          state.total = countRes.count || 0;
+          const features = pageRes.features || [];
+          renderRows(features);
+          const pageJust = features.reduce((s, f) => s + Number(f.attributes.TotalAppraisedValue || 0), 0);
+          const pageTax = features.reduce((s, f) => s + (estimateTax(f.attributes.DistrictGroup, f.attributes.TotalTaxableValue).total || 0), 0);
+          statsEl.innerHTML = `
+            <span><strong>${state.total.toLocaleString()}</strong> matching parcel${state.total === 1 ? "" : "s"}</span>
+            <span>Showing <strong>${features.length}</strong> on this page</span>
+            <span>Page just value <strong>${fmtUSD(pageJust)}</strong></span>
+            <span>Page est. ad valorem <strong>${fmtUSD(pageTax)}</strong></span>
+          `;
+        }
+
+        const pages = Math.max(1, Math.ceil(state.total / PAGE_SIZE));
+        document.getElementById("page-info").textContent = `Page ${state.page.toLocaleString()} of ${pages.toLocaleString()}`;
+        document.getElementById("prev-page").disabled = state.page <= 1;
+        document.getElementById("next-page").disabled = state.page >= pages;
+      } catch (err) {
+        if (err.name === "AbortError") return;
+        tbody.classList.remove("loading");
+        tbody.innerHTML = `<tr><td colspan="6" class="empty-state">Could not load parcels (${esc(err.message)}).</td></tr>`;
+        statsEl.textContent = "Unable to load parcel data.";
+      }
+    }
+
+    // Map
+    function baseLayers() {
+      return {
+        Streets: L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
+          maxZoom: 20, maxNativeZoom: 19,
+          attribution: "&copy; Esri, HERE, Garmin, OpenStreetMap contributors"
+        }),
+        OpenStreetMap: L.tileLayer("https://tile.openstreetmap.de/{z}/{x}/{y}.png", {
+          maxZoom: 20, maxNativeZoom: 19,
+          attribution: "&copy; OpenStreetMap contributors"
+        }),
+        Satellite: L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+          maxZoom: 20, maxNativeZoom: 19,
+          attribution: "Imagery &copy; Esri, Maxar, Earthstar Geographics"
+        })
+      };
+    }
+
+    const toLatLngs = rings => rings.map(r => r.map(([lon, lat]) => [lat, lon]));
+
+    const ResultsMap = {
+      map: null, layer: null, nearCircle: null, abort: null, renderer: null,
+      moveTimer: null, lastBounds: null, lastWhere: null, lastShapes: null,
+
+      init() {
+        if (this.map) return;
+        const layers = baseLayers();
+        this.renderer = L.canvas({ padding: 0.5 });
+        this.map = L.map("map", { preferCanvas: true, renderer: this.renderer, layers: [layers.Streets] }).setView([27.2730, -80.3582], 16);
+        L.control.layers(layers, null, { position: "topright" }).addTo(this.map);
+        this.layer = L.layerGroup().addTo(this.map);
+        this.map.on("moveend", () => {
+          clearTimeout(this.moveTimer);
+          this.moveTimer = setTimeout(() => this.refresh(false), 180);
+        });
+        document.getElementById("map-legend").innerHTML = Object.entries(CATEGORY_COLORS)
+          .map(([k, c]) => `<span><i style="background:${c}"></i>${k}</span>`).join("");
+      },
+
+      show(fitToQuery = false) {
+        this.init();
+        this.lastBounds = null;
+        setTimeout(async () => {
+          this.map.invalidateSize();
+          if (this.nearCircle) { this.nearCircle.remove(); this.nearCircle = null; }
+          if (state.near) {
+            this.nearCircle = L.circle([state.near.lat, state.near.lon], {
+              radius: state.near.radius * 1609.34, color: "#38bdf8", weight: 2, fill: false, dashArray: "6 6", interactive: false
+            }).addTo(this.map);
+            this.map.fitBounds(this.nearCircle.getBounds(), { padding: [24, 24], maxZoom: 17 });
+            this.refresh(true);
+            return;
+          }
+          if (fitToQuery) {
+            const fitted = await this.fitToSearchResults();
+            if (fitted) return;
+          }
+          this.refresh(true);
+        }, 50);
+      },
+
+      async fitToSearchResults() {
+        const where = buildWhere();
+        if (where === "1=1") return false;
+        try {
+          if (dataMode === "local") {
+            const p = buildLocalParams();
+            p.set("size", "1");
+            const res = await fetch("/api/properties?" + p.toString());
+            const d = await res.json();
+            const first = (d.rows || [])[0];
+            if (first && first.lat && first.lon) {
+              this.map.setView([first.lat, first.lon], 17);
+              return true;
+            }
+            return false;
+          }
+          const extRes = await queryPaslc({ where, returnExtentOnly: "true", outSR: "4326" });
+          const ex = extRes.extent;
+          if (ex && isFinite(ex.xmin) && isFinite(ex.ymin) && isFinite(ex.xmax) && isFinite(ex.ymax) && ex.xmin !== ex.xmax) {
+            this.map.fitBounds([[ex.ymin, ex.xmin], [ex.ymax, ex.xmax]], { padding: [36, 36], maxZoom: 18 });
+            return true;
+          }
+        } catch { /* ignore */ }
+        return false;
+      },
+
+      async refresh(force = false) {
+        if (!this.map || document.getElementById("map-view").hidden) return;
+        const viewBounds = this.map.getBounds();
+        const zoom = this.map.getZoom();
+        const where = buildWhere();
+        const wantShapesHint = zoom >= SHAPES_MIN_ZOOM || !!state.near;
+
+        if (!force && !state.near && this.lastBounds && this.lastWhere === where &&
+            this.lastShapes === wantShapesHint && this.lastBounds.contains(viewBounds)) {
+          return;
+        }
+
+        const fetchBounds = viewBounds.pad(0.35);
+        const bbox = `${fetchBounds.getWest().toFixed(6)},${fetchBounds.getSouth().toFixed(6)},${fetchBounds.getEast().toFixed(6)},${fetchBounds.getNorth().toFixed(6)}`;
+        const nearBbox = state.near ? nearSpatialParams().geometry : null;
+        const queryBbox = nearBbox || bbox;
+
+        this.abort?.abort();
+        this.abort = new AbortController();
+        const status = document.getElementById("map-status");
+        const statsEl = document.getElementById("results-stats");
+        status.textContent = "Updating parcels…";
+
+        try {
+          if (dataMode === "local") {
+            const p = buildLocalParams();
+            p.set("bbox", queryBbox);
+            if (wantShapesHint) p.set("shapes", "1");
+            const res = await fetch("/api/map?" + p.toString(), { signal: this.abort.signal });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            if (data.truncated) {
+              this.layer.clearLayers();
+              this.lastBounds = null;
+              status.textContent = `${data.total.toLocaleString()} parcels in view — zoom in or filter to display them`;
+              statsEl.innerHTML = `<span><strong>${data.total.toLocaleString()}</strong> parcels in map view</span>`;
+              return;
+            }
+            const nextShapes = [];
+            for (const f of (data.features || [])) {
+              const color = CATEGORY_COLORS[f.category] || "#38bdf8";
+              const tip = `<strong>${esc(f.address || "(No address)")}</strong><br>${esc(f.category)}${f.est_tax != null ? ` &middot; Est. ${fmtUSD2(f.est_tax)}` : ""}`;
+              const shape = f.rings
+                ? L.polygon(toLatLngs(f.rings), { renderer: this.renderer, color, weight: 1.5, fillOpacity: 0.22 })
+                : L.circleMarker([f.lat, f.lon], { renderer: this.renderer, radius: 5, color: "#061529", weight: 1, fillColor: color, fillOpacity: 0.9 });
+              shape.bindTooltip(tip);
+              shape.on("click", () => openSheet(f.property_id));
+              nextShapes.push(shape);
+            }
+            this.layer.clearLayers();
+            nextShapes.forEach(s => s.addTo(this.layer));
+            this.lastBounds = fetchBounds; this.lastWhere = where; this.lastShapes = wantShapesHint;
+            status.textContent = nextShapes.length ? `${nextShapes.length.toLocaleString()} parcels loaded${wantShapesHint ? " (local GIS outlines)" : ""}` : "No matching parcels in this view";
+            statsEl.innerHTML = `<span><strong>${nextShapes.length.toLocaleString()}</strong> parcels loaded on map</span><span>Click any parcel for details</span>`;
+            return;
+          }
+
+          const countRes = await queryPaslc({
+            where, geometry: queryBbox, geometryType: "esriGeometryEnvelope",
+            inSR: "4326", spatialRel: "esriSpatialRelIntersects", returnCountOnly: "true"
+          }, this.abort.signal);
+          const total = countRes.count || 0;
+
+          if (total === 0) {
+            this.layer.clearLayers();
+            this.lastBounds = fetchBounds; this.lastWhere = where; this.lastShapes = wantShapesHint;
+            status.textContent = "No matching parcels in this view";
+            statsEl.innerHTML = `<span><strong>0</strong> parcels in map view</span>`;
+            return;
+          }
+          if (total > MAP_MAX_FEATURES) {
+            this.layer.clearLayers();
+            this.lastBounds = null;
+            status.textContent = `${total.toLocaleString()} parcels in view — zoom in or filter to display them`;
+            statsEl.innerHTML = `<span><strong>${total.toLocaleString()}</strong> parcels in map view (zoom in to inspect)</span>`;
+            return;
+          }
+
+          const wantShapes = zoom >= SHAPES_MIN_ZOOM || total <= 450;
+          const data = await queryPaslc({
+            where, geometry: queryBbox, geometryType: "esriGeometryEnvelope",
+            inSR: "4326", spatialRel: "esriSpatialRelIntersects",
+            outFields: "PropertyID,SiteAddress,LandUseCode,DistrictGroup,TotalTaxableValue,XCoordinate,YCoordinate",
+            returnGeometry: wantShapes ? "true" : "false",
+            outSR: "4326", resultRecordCount: String(MAP_MAX_FEATURES)
+          }, this.abort.signal);
+
+          const feats = data.features || [];
+          const nextShapes = [];
+          for (const f of feats) {
+            const a = f.attributes;
+            const cat = categoryFromCode(a.LandUseCode);
+            const color = CATEGORY_COLORS[cat] || "#38bdf8";
+            const est = estimateTax(a.DistrictGroup, a.TotalTaxableValue);
+            const tip = `<strong>${esc(a.SiteAddress || "(No address)")}</strong><br>${esc(cat)}${est.total != null ? ` &middot; Est. ${fmtUSD2(est.total)}` : ""}`;
+            let shape = null;
+            if (wantShapes && f.geometry && f.geometry.rings) {
+              shape = L.polygon(toLatLngs(f.geometry.rings), { renderer: this.renderer, color, weight: 1.5, fillOpacity: 0.22 });
+            } else if (a.YCoordinate && a.XCoordinate) {
+              shape = L.circleMarker([Number(a.YCoordinate), Number(a.XCoordinate)], {
+                renderer: this.renderer, radius: 5, color: "#061529", weight: 1, fillColor: color, fillOpacity: 0.9
+              });
+            }
+            if (shape) {
+              shape.bindTooltip(tip);
+              shape.on("click", () => openSheet(a.PropertyID));
+              nextShapes.push(shape);
+            }
+          }
+          this.layer.clearLayers();
+          nextShapes.forEach(s => s.addTo(this.layer));
+          this.lastBounds = fetchBounds; this.lastWhere = where; this.lastShapes = wantShapesHint;
+          status.textContent = `${feats.length.toLocaleString()} parcel${feats.length === 1 ? "" : "s"} loaded${wantShapes ? " (GIS outlines)" : " — zoom in for outlines"}`;
+          statsEl.innerHTML = `<span><strong>${feats.length.toLocaleString()}</strong> parcel${feats.length === 1 ? "" : "s"} loaded on map</span><span>Click any parcel for details</span>`;
+        } catch (err) {
+          if (err.name !== "AbortError") status.textContent = `Map query error (${err.message})`;
+        }
+      }
+    };
+
+    // Lot Drawing SVG
+    function ringArea(pts) {
+      let a = 0;
+      for (let i = 0; i < pts.length; i++) {
+        const [x0, y0] = pts[i], [x1, y1] = pts[(i + 1) % pts.length];
+        a += x0 * y1 - x1 * y0;
+      }
+      return a / 2;
+    }
+
+    function buildPlatSvg(a, rings) {
+      if (!rings || !rings.length) return "";
+      const lat0 = rings[0].reduce((s, p) => s + p[1], 0) / rings[0].length;
+      const lon0 = rings[0].reduce((s, p) => s + p[0], 0) / rings[0].length;
+      const kx = FEET_PER_DEG_LAT * Math.cos(lat0 * Math.PI / 180);
+      const ft = rings.map(r => r.map(([lon, lat]) => [(lon - lon0) * kx, (lat - lat0) * FEET_PER_DEG_LAT]));
+
+      const W = 540, H = 380, PAD = 58;
+      const xs = ft.flat().map(p => p[0]), ys = ft.flat().map(p => p[1]);
+      const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+      const spanX = Math.max(maxX - minX, 1), spanY = Math.max(maxY - minY, 1);
+      const scale = Math.min((W - 2 * PAD) / spanX, (H - 2 * PAD - 28) / spanY);
+      const ox = (W - spanX * scale) / 2, oy = 36 + (H - 36 - spanY * scale) / 2;
+      const sx = x => ox + (x - minX) * scale;
+      const sy = y => oy + (maxY - y) * scale;
+
+      const path = ft.map(r => "M" + r.map(([x, y]) => `${sx(x).toFixed(1)},${sy(y).toFixed(1)}`).join("L") + "Z").join("");
+      const labels = [];
+      for (const r of ft) {
+        if (ringArea(r) === 0) continue;
+        const ccw = ringArea(r) > 0;
+        const edges = r.map((p, i) => [p, r[(i + 1) % r.length]]);
+        const minLen = Math.max(...edges.map(([p0, p1]) => Math.hypot(p1[0] - p0[0], p1[1] - p0[1]))) * (edges.length > 24 ? 0.25 : 0.06);
+        for (const [p0, p1] of edges) {
+          const len = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]);
+          if (len < minLen || len * scale < 28) continue;
+          const mx = sx((p0[0] + p1[0]) / 2), my = sy((p0[1] + p1[1]) / 2);
+          let nx = sy(p1[1]) - sy(p0[1]), ny = -(sx(p1[0]) - sx(p0[0]));
+          const n = Math.hypot(nx, ny) || 1;
+          nx /= n; ny /= n;
+          if (ccw) { nx = -nx; ny = -ny; }
+          let ang = Math.atan2(sy(p1[1]) - sy(p0[1]), sx(p1[0]) - sx(p0[0])) * 180 / Math.PI;
+          if (ang > 90) ang -= 180;
+          if (ang < -90) ang += 180;
+          const tx = mx + nx * 12, ty = my + ny * 12;
+          labels.push(`<text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" transform="rotate(${ang.toFixed(1)} ${tx.toFixed(1)} ${ty.toFixed(1)})" text-anchor="middle" dominant-baseline="middle" font-family="'Google Sans Code', monospace" font-size="11" fill="#475569">${Math.round(len).toLocaleString()}′</text>`);
+        }
+      }
+
+      const areaFt = Math.abs(ft.reduce((s, r) => s + ringArea(r), 0));
+      const target = 110 / scale;
+      const pow = Math.pow(10, Math.floor(Math.log10(target)));
+      const barFt = [1, 2, 5, 10].map(m => m * pow).filter(v => v <= target).pop() || pow;
+      const barPx = barFt * scale;
+
+      return `<svg id="lot-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
+        <rect width="100%" height="100%" fill="#ffffff"/>
+        <text x="18" y="24" font-family="'Google Sans', sans-serif" font-size="14" font-weight="600" fill="#061529">${esc(a.SiteAddress || "(No address)")}</text>
+        <text x="18" y="40" font-family="'Google Sans Code', monospace" font-size="11" fill="#475569">Parcel ${esc(a.ParcelID)} · ${Math.round(areaFt).toLocaleString()} sq ft (${(areaFt / 43560).toFixed(2)} ac)</text>
+        <path d="${path}" fill="#dbeafe" fill-rule="evenodd" stroke="#0b2240" stroke-width="2" stroke-linejoin="round"/>
+        ${labels.join("\n")}
+        <g transform="translate(${W - 30} ${H - 58})">
+          <path d="M0,-18 L7,5 L0,0 L-7,5 Z" fill="#061529"/>
+          <text y="19" text-anchor="middle" font-family="'Google Sans', sans-serif" font-size="11" font-weight="600" fill="#061529">N</text>
+        </g>
+        <g transform="translate(18 ${H - 22})">
+          <rect width="${barPx.toFixed(1)}" height="5" fill="#061529"/>
+          <rect width="${(barPx / 2).toFixed(1)}" height="5" fill="#ffffff" stroke="#061529"/>
+          <text y="-5" font-family="'Google Sans Code', monospace" font-size="10" fill="#475569">0</text>
+          <text x="${barPx.toFixed(1)}" y="-5" text-anchor="end" font-family="'Google Sans Code', monospace" font-size="10" fill="#475569">${barFt.toLocaleString()} ft</text>
+        </g>
+        <text x="${W - 18}" y="${H - 8}" text-anchor="end" font-family="'Google Sans Flex', sans-serif" font-size="9.5" fill="#64748b">County GIS parcel geometry; not a survey.</text>
+      </svg>`;
+    }
+
+    function downloadBlob(blob, filename) {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }
+
+    // Slide-Over Property Sheet
+    let parcelMap = null;
+    async function openSheet(propertyId) {
+      const bd = document.getElementById("sheet-backdrop");
+      bd.classList.add("open");
+      bd.setAttribute("aria-hidden", "false");
+      document.getElementById("sheet-title").textContent = "Loading parcel…";
+      document.getElementById("sheet-subtitle").textContent = "";
+      document.getElementById("sheet-body").innerHTML = `<div class="empty-state">Fetching live record and GIS boundary…</div>`;
+
+      try {
+        let a, rings, est, nonAdValoremLines = [];
+        if (dataMode === "local") {
+          const res = await fetch("/api/property/" + encodeURIComponent(propertyId));
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const d = await res.json();
+          a = {
+            PropertyID: d.property_id, ParcelID: d.parcel_id,
+            SiteAddress: (d.address || "") + (d.unit ? ` #${d.unit}` : ""),
+            SiteCity: d.jurisdiction, SiteZIP: d.zip,
+            LandUseCodeDescription: d.land_use_desc, _category: d.category,
+            Zoning: d.zoning, ImprovedStatus: d.building_value > 0 ? "Improved" : "Vacant",
+            DistrictGroup: d.tax_district, Owner1: d.owner, Owner2: d.owner2, Owner3: d.owner3,
+            _mailStatus: d.mail_status,
+            _mailingFull: d.mail_line1 ? [d.mail_line1, d.mail_line2, d.mail_city_state_zip].filter(Boolean).join(", ") : d.mailing_address,
+            YearBuilt: d.year_built, BuildingCount: d.buildings, Beds: d.bedrooms,
+            Baths: d.full_baths ? (d.full_baths + (d.half_baths ? 0.5 : 0)) : 0,
+            TotalArea: d.acres ? d.acres * 43560 : 0, SubdivisionDescription: d.subdivision,
+            TotalAppraisedValue: d.just_value, TotalAssessedValue: d.assessed_value,
+            TotalAppraisedLandValue: d.land_value, TotalAppraisedBuildingValue: d.building_value,
+            TotalExemptionValue: d.exemption_value, TotalTaxableValue: d.taxable_value,
+            SalePrice: d.last_sale_price, SaleDate: d.last_sale_date,
+            YCoordinate: d.lat, XCoordinate: d.lon, LegalDescription: d.legal
+          };
+          rings = d.geometry && d.geometry.rings ? d.geometry.rings : null;
+          est = {
+            lines: (d.levies || []).map(l => ({ authority: l.authority, basis: l.basis, rate: l.rate, taxable: l.taxable, tax: l.tax })),
+            mills: (d.levies || []).reduce((s, l) => s + l.rate, 0),
+            total: d.est_tax
+          };
+          nonAdValoremLines = d.other_assessments || [];
+        } else {
+          const res = await queryPaslc({ where: `PropertyID = ${Number(propertyId)}`, outFields: "*", returnGeometry: "true", outSR: "4326" });
+          const feat = (res.features || [])[0];
+          if (!feat) {
+            document.getElementById("sheet-body").innerHTML = `<div class="empty-state">Parcel record not found.</div>`;
+            return;
+          }
+          a = feat.attributes;
+          rings = feat.geometry && feat.geometry.rings ? feat.geometry.rings : null;
+          est = estimateTax(a.DistrictGroup, a.TotalTaxableValue);
+        }
+
+        const cat = a._category || categoryFromCode(a.LandUseCode);
+        const city = a.SiteCity === "Saint Lucie County" ? "Unincorporated St. Lucie County" : (a.SiteCity || "");
+        const lat = Number(a.YCoordinate), lon = Number(a.XCoordinate);
+
+        document.getElementById("sheet-title").textContent = (a.SiteAddress || "").trim() || "(No street address)";
+        document.getElementById("sheet-subtitle").innerHTML = `${esc(city)} ${esc(a.SiteZIP || "")} &middot; <span class="mono">${esc(a.ParcelID)}</span>`;
+
+        const ms = a._mailStatus || mailStatus(a);
+        const mailBadge = ms === "same" ? `<span class="pill ok">Same as property</span>`
+          : ms === "po_box" ? `<span class="pill warn">PO Box</span>`
+          : ms === "different" ? `<span class="pill warn">Different address${a.MailState && a.MailState !== "FL" ? ` · ${esc(a.MailState)}` : ""}</span>`
+          : `<span class="pill">Unknown</span>`;
+        const mailingFull = a._mailingFull || [a.MailAddress1, a.MailAddress2, [a.MailCity, a.MailState, a.MailZipCode].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+        const owners = [a.Owner1, a.Owner2, a.Owner3].filter(Boolean).join(" · ") || "—";
+
+        const groupRows = (basis, label) => {
+          const rows = est.lines.filter(l => l.basis === basis);
+          if (!rows.length) return "";
+          return `<tr class="group-row"><td colspan="4">${label}</td></tr>` + rows.map(l => `
+            <tr><td>${esc(l.authority)}</td><td class="num">${fmtUSD(l.taxable)}</td><td class="num mono">${l.rate.toFixed(4)}</td><td class="num">${fmtUSD2(l.tax)}</td></tr>`).join("");
+        };
+        const navRows = nonAdValoremLines.length
+          ? `<tr class="group-row"><td colspan="4">Non-Ad Valorem Assessments</td></tr>` +
+            nonAdValoremLines.map(o => `<tr><td colspan="3">${esc(o.description)}</td><td class="num">${fmtUSD2(o.amount)}</td></tr>`).join("")
+          : "";
+        const lotSvg = rings ? buildPlatSvg(a, rings) : "";
+
+        document.getElementById("sheet-body").innerHTML = `
+          ${rings ? `<div class="parcel-map" id="parcel-map"></div>` : ""}
+          <div class="sheet-actions">
+            ${lat && lon ? `<button class="btn-subtle" type="button" id="act-near-here">Properties near here</button>` : ""}
+            ${lat && lon ? `<a class="btn-subtle" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${lat},${lon}">Google Maps &#8599;</a>` : ""}
+            ${lat && lon ? `<a class="btn-subtle" target="_blank" rel="noopener" href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lon}">Street View &#8599;</a>` : ""}
+            <a class="btn-subtle" target="_blank" rel="noopener" href="${TRIM_URL}${encodeURIComponent(a.PropertyID)}">Official TRIM PDF &#8599;</a>
+          </div>
+
+          <div class="sheet-section">
+            <h4>Ownership &amp; Mailing</h4>
+            <div class="kv-grid">
+              <div class="kv-item"><span>Owner</span><strong>${esc(owners)}</strong></div>
+              <div class="kv-item"><span>Mailing Status</span><strong>${mailBadge}</strong></div>
+              <div class="kv-item" style="grid-column:1/-1"><span>Mailing Address</span><strong>${esc(mailingFull || "—")}</strong></div>
+            </div>
+          </div>
+
+          <div class="sheet-section">
+            <h4>2026 Tax Estimate (District <span class="mono">${esc(a.DistrictGroup || "—")}</span>)</h4>
+            ${est.lines.length ? `
+              <table class="trim-table">
+                <thead><tr><th>Taxing Authority</th><th class="num">Taxable</th><th class="num">Mills</th><th class="num">Est. Tax</th></tr></thead>
+                <tbody>
+                  ${groupRows("school", "School")}
+                  ${groupRows("county", "County")}
+                  ${groupRows("other", "City &amp; Districts")}
+                  ${navRows}
+                  <tr class="total-row">
+                    <td colspan="2">Estimated 2026 ${nonAdValoremLines.length ? "Total Tax" : "Ad Valorem"}</td>
+                    <td class="num mono">${est.mills.toFixed(4)}</td>
+                    <td class="num">${fmtUSD2(est.total)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            ` : `<p style="font-size:13px; color:var(--text-secondary);">Millage rate table not available for district ${esc(a.DistrictGroup || "—")}.</p>`}
+          </div>
+
+          <div class="sheet-section">
+            <h4>Values</h4>
+            <div class="kv-grid">
+              <div class="kv-item"><span>Just (Appraised) Value</span><strong>${fmtUSD(a.TotalAppraisedValue)}</strong></div>
+              <div class="kv-item"><span>Assessed Value</span><strong>${fmtUSD(a.TotalAssessedValue)}</strong></div>
+              <div class="kv-item"><span>Land / Building Value</span><strong>${fmtUSD(a.TotalAppraisedLandValue)} / ${fmtUSD(a.TotalAppraisedBuildingValue)}</strong></div>
+              <div class="kv-item"><span>Exemption Value</span><strong>${fmtUSD(a.TotalExemptionValue)}</strong></div>
+              <div class="kv-item"><span>Taxable Value</span><strong>${fmtUSD(a.TotalTaxableValue)}</strong></div>
+              <div class="kv-item"><span>Last Sale</span><strong>${a.SalePrice ? fmtUSD(a.SalePrice) : "—"} (${typeof a.SaleDate === "string" ? esc(a.SaleDate) : fmtDate(a.SaleDate)})</strong></div>
+            </div>
+          </div>
+
+          <div class="sheet-section">
+            <h4>Building &amp; Land</h4>
+            <div class="kv-grid">
+              <div class="kv-item"><span>Land Use</span><strong>${esc(a.LandUseCodeDescription || "—")} (${esc(cat)})</strong></div>
+              <div class="kv-item"><span>Zoning / Status</span><strong>${esc(a.Zoning || "—")} &middot; ${esc(a.ImprovedStatus || "—")}</strong></div>
+              <div class="kv-item"><span>Year Built / Buildings</span><strong>${a.YearBuilt || "—"} &middot; ${a.BuildingCount || 0} bldg</strong></div>
+              <div class="kv-item"><span>Beds / Baths</span><strong>${a.Beds ? `${esc(a.Beds)} bd / ${a.Baths ?? 0} ba` : "—"}</strong></div>
+              <div class="kv-item"><span>Lot Area</span><strong>${a.TotalArea ? `${Number(a.TotalArea).toLocaleString()} sq ft (${(a.TotalArea / 43560).toFixed(2)} ac)` : "—"}</strong></div>
+              <div class="kv-item"><span>Subdivision</span><strong>${esc(a.SubdivisionDescription || "—")}</strong></div>
+            </div>
+          </div>
+
+          ${lotSvg ? `
+            <div class="sheet-section">
+              <h4>GIS Lot Drawing</h4>
+              <div class="lot-box">
+                ${lotSvg}
+                <div class="lot-actions">
+                  <span>Measured from county GIS parcel outline</span>
+                  <span>
+                    <button class="reset-link" type="button" id="dl-svg">Download SVG</button> &middot;
+                    <button class="reset-link" type="button" id="dl-png">Download PNG</button>
+                  </span>
+                </div>
+              </div>
+            </div>
+          ` : ""}
+
+          <div class="sheet-section">
+            <h4>Legal Description</h4>
+            <p class="mono" style="margin:0; font-size:12px; color:var(--text-secondary); line-height:1.55;">${esc(a.LegalDescription || "—")}</p>
+          </div>
+        `;
+
+        const nearHere = document.getElementById("act-near-here");
+        if (nearHere) nearHere.addEventListener("click", () => { closeSheet(); activateNear(lat, lon, a.SiteAddress || "parcel"); });
+        const dlSvgBtn = document.getElementById("dl-svg");
+        if (dlSvgBtn) dlSvgBtn.addEventListener("click", () => downloadBlob(new Blob([lotSvg], { type: "image/svg+xml" }), `${a.ParcelID}-lot.svg`));
+        const dlPngBtn = document.getElementById("dl-png");
+        if (dlPngBtn) {
+          dlPngBtn.addEventListener("click", () => {
+            const img = new Image();
+            const url = URL.createObjectURL(new Blob([lotSvg], { type: "image/svg+xml" }));
+            img.onload = () => {
+              const c = document.createElement("canvas");
+              c.width = img.width * 2; c.height = img.height * 2;
+              const ctx = c.getContext("2d");
+              ctx.scale(2, 2); ctx.drawImage(img, 0, 0);
+              URL.revokeObjectURL(url);
+              c.toBlob(b => downloadBlob(b, `${a.ParcelID}-lot.png`), "image/png");
+            };
+            img.src = url;
+          });
+        }
+
+        if (rings) {
+          if (parcelMap) { parcelMap.remove(); parcelMap = null; }
+          const layers = baseLayers();
+          parcelMap = L.map("parcel-map", { layers: [layers.Satellite], zoomControl: true });
+          L.control.layers(layers, null, { position: "topright" }).addTo(parcelMap);
+          const outline = L.polygon(toLatLngs(rings), { color: "#facc15", weight: 3, fillOpacity: 0.14 }).addTo(parcelMap);
+          parcelMap.fitBounds(outline.getBounds(), { padding: [28, 28], maxZoom: 19 });
+
+          const nb = outline.getBounds().pad(1.4);
+          const nbBbox = `${nb.getWest().toFixed(6)},${nb.getSouth().toFixed(6)},${nb.getEast().toFixed(6)},${nb.getNorth().toFixed(6)}`;
+          const nbPromise = dataMode === "local"
+            ? fetch(`/api/map?shapes=1&bbox=${nbBbox}`).then(r => r.json()).then(d => (d.features || []).map(f => ({ id: f.property_id, address: f.address, rings: f.rings })))
+            : queryPaslc({
+                where: "1=1", geometry: nbBbox, geometryType: "esriGeometryEnvelope",
+                inSR: "4326", spatialRel: "esriSpatialRelIntersects",
+                outFields: "PropertyID,SiteAddress", returnGeometry: "true", outSR: "4326", resultRecordCount: "80"
+              }).then(nbData => (nbData.features || []).map(nf => ({ id: nf.attributes.PropertyID, address: nf.attributes.SiteAddress, rings: nf.geometry?.rings })));
+          nbPromise.then(neighbors => {
+            if (!parcelMap) return;
+            for (const nf of neighbors) {
+              if (nf.id === a.PropertyID || !nf.rings) continue;
+              L.polygon(toLatLngs(nf.rings), { color: "#ffffff", weight: 1, opacity: 0.65, fillOpacity: 0 })
+                .bindTooltip(esc(nf.address || "(No address)"))
+                .on("click", () => openSheet(nf.id))
+                .addTo(parcelMap);
+            }
+            outline.bringToFront();
+          }).catch(() => {});
+        }
+      } catch (err) {
+        document.getElementById("sheet-body").innerHTML = `<div class="empty-state">Error loading parcel (${esc(err.message)}).</div>`;
+      }
+    }
+
+    function closeSheet() {
+      const bd = document.getElementById("sheet-backdrop");
+      bd.classList.remove("open");
+      bd.setAttribute("aria-hidden", "true");
+      if (parcelMap) { parcelMap.remove(); parcelMap = null; }
+    }
+
+    function activateNear(lat, lon, label) {
+      const radius = Number(document.getElementById("near-radius").value || 0.5);
+      state.near = { lat, lon, radius, label };
+      state.page = 1;
+      const btn = document.getElementById("near-btn");
+      btn.classList.add("active");
+      btn.textContent = `Near ${label} ×`;
+      document.getElementById("near-radius").hidden = false;
+      refreshView();
+    }
+
+    function clearNear() {
+      state.near = null;
+      const btn = document.getElementById("near-btn");
+      btn.classList.remove("active");
+      btn.textContent = "Near me";
+      document.getElementById("near-radius").hidden = true;
+    }
+
+    function refreshView(fitToQuery = false) {
+      const isMap = state.view === "map";
+      document.getElementById("table-view").hidden = isMap;
+      document.getElementById("pager").hidden = isMap;
+      document.getElementById("map-view").hidden = !isMap;
+      if (isMap) ResultsMap.show(fitToQuery);
+      else loadTable();
+    }
+
+    document.querySelectorAll(".segmented button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".segmented button").forEach(b => b.setAttribute("aria-selected", "false"));
+        btn.setAttribute("aria-selected", "true");
+        state.view = btn.dataset.view;
+        refreshView(state.view === "map");
+      });
+    });
+
+    let searchTimer = null;
+    document.getElementById("search").addEventListener("input", () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => { state.page = 1; refreshView(true); }, 320);
+    });
+
+    ["f-category", "f-jurisdiction", "f-exempt", "f-improved", "f-state"].forEach(id => {
+      document.getElementById(id).addEventListener("change", () => { state.page = 1; refreshView(true); });
+    });
+
+    document.getElementById("near-radius").addEventListener("change", () => {
+      if (state.near) { state.near.radius = Number(document.getElementById("near-radius").value); state.page = 1; refreshView(); }
+    });
+
+    document.getElementById("near-btn").addEventListener("click", function () {
+      if (state.near) { clearNear(); state.page = 1; refreshView(); return; }
+      this.textContent = "Locating…";
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          pos => activateNear(pos.coords.latitude, pos.coords.longitude, "you"),
+          () => activateNear(27.2730, -80.3582, "PSL City Hall"),
+          { timeout: 5000 }
+        );
+      } else {
+        activateNear(27.2730, -80.3582, "PSL City Hall");
+      }
+    });
+
+    document.getElementById("table-head").addEventListener("click", e => {
+      const th = e.target.closest("th[data-key]");
+      if (!th) return;
+      const key = th.dataset.key;
+      if (state.sortBy === key) state.sortDir = state.sortDir === "ASC" ? "DESC" : "ASC";
+      else { state.sortBy = key; state.sortDir = (key === "SiteAddress" || key === "Owner1") ? "ASC" : "DESC"; }
+      state.page = 1;
+      loadTable();
+    });
+
+    document.getElementById("table-body").addEventListener("click", e => {
+      const tr = e.target.closest("tr[data-id]");
+      if (tr) openSheet(tr.dataset.id);
+    });
+
+    document.getElementById("prev-page").addEventListener("click", () => {
+      if (state.page > 1) { state.page--; loadTable(); window.scrollTo({ top: document.getElementById("browse").offsetTop - 76, behavior: "smooth" }); }
+    });
+    document.getElementById("next-page").addEventListener("click", () => {
+      state.page++; loadTable(); window.scrollTo({ top: document.getElementById("browse").offsetTop - 76, behavior: "smooth" });
+    });
+
+    document.getElementById("reset-filters").addEventListener("click", () => {
+      ["search", "f-category", "f-jurisdiction", "f-exempt", "f-improved", "f-state"].forEach(id => { document.getElementById(id).value = ""; });
+      clearNear();
+      state.page = 1;
+      refreshView();
+    });
+
+    document.getElementById("sheet-close").addEventListener("click", closeSheet);
+    document.getElementById("sheet-backdrop").addEventListener("click", e => { if (e.target.id === "sheet-backdrop") closeSheet(); });
+    document.addEventListener("keydown", e => { if (e.key === "Escape") closeSheet(); });
+
+    (async function init() {
+      if (location.protocol !== "file:") {
+        try {
+          const probe = await fetch("/api/filters");
+          if (probe.ok) {
+            dataMode = "local";
+            document.getElementById("data-source-badge").textContent = "Local SQLite Backend";
+            const meta = await probe.json();
+            const total = (meta.categories || []).reduce((s, c) => s + (c.count || 0), 0);
+            if (total) document.getElementById("hero-count").textContent = total.toLocaleString();
+          }
+        } catch { /* fall back to live PASLC GIS */ }
+      }
+      if (dataMode === "paslc") {
+        queryPaslc({ where: "1=1", returnCountOnly: "true" })
+          .then(r => { if (r.count) document.getElementById("hero-count").textContent = r.count.toLocaleString(); })
+          .catch(() => {});
+      }
+      loadTable();
+    })();
+  </script>
+</body>
+</html>
